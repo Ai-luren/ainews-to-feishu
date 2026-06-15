@@ -188,7 +188,7 @@ def test_juya_dead_alerts_after_3_silent_days(state_path, monkeypatch):
     # 运维群收到 juya-dead 告警
     assert len(ops_alerts) == 1
     assert ops_alerts[0][0] == ENV["LARK_OPS_WEBHOOK_URL"]
-    assert "juya 已连续 4 天未更新" in ops_alerts[0][1]
+    assert "juya 连续 4 天未更新" in ops_alerts[0][1]
     assert "2026-04-24" in ops_alerts[0][1]
     # state 记录已告警
     assert json.loads(state_path.read_text())["juya_dead_alerted_on"] == "2026-04-28"
