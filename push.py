@@ -352,9 +352,9 @@ def main() -> int:
 
     _log(f"[meta] today={today} backfill={backfill}")
 
-    # 顺序推送：juya 先，aihot 后；互不影响
-    juya_ok = _push_juya(webhook, secret, ops_webhook, ops_secret, today, backfill)
+    # 顺序推送：aihot 先，juya 后；互不影响
     aihot_ok = _push_aihot(webhook, secret, ops_webhook, ops_secret, today, backfill)
+    juya_ok = _push_juya(webhook, secret, ops_webhook, ops_secret, today, backfill)
 
     if juya_ok and aihot_ok:
         _log("[meta] all flows completed")
