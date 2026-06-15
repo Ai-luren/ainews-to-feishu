@@ -75,7 +75,7 @@ def _push_juya(webhook: str, secret: str, ops_webhook: str, ops_secret: str,
         _log(f"[juya] [skip] already pushed today ({today})")
         return True
     if backfill and today == datetime.now(BEIJING).date() and is_pushed_today(STATE_PATH, today):
-        _log(f"[juya] [skip] backfill 今天已推送")
+        _log("[juya] [skip] backfill 今天已推送")
         return True
 
     # 拉取
@@ -147,7 +147,7 @@ def _push_aihot(webhook: str, secret: str, ops_webhook: str, ops_secret: str,
         _log(f"[aihot] [skip] already pushed today ({today})")
         return True
     if backfill and today == datetime.now(BEIJING).date() and is_aihot_pushed_today(STATE_PATH, today):
-        _log(f"[aihot] [skip] backfill 今天已推送")
+        _log("[aihot] [skip] backfill 今天已推送")
         return True
 
     # 拉取

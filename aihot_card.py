@@ -99,7 +99,7 @@ def parse_daily_to_card(daily: Mapping[str, Any]) -> Optional[Dict[str, Any]]:
             elements.append({"tag": "div", "text": {"tag": "lark_md", "content": "\n".join(lead_md)}})
 
     # 主体 sections
-    for i, group in enumerate(flat):
+    for group in flat:
         if elements:  # 不是第一个 group 之前加 hr 分隔
             elements.append({"tag": "hr"})
         md_lines = [f"**{group['category']}**"]
