@@ -21,6 +21,14 @@ ENV = {
 }
 
 
+@pytest.fixture(autouse=True)
+def _block_aihot_flow(monkeypatch):
+    """juya 测试不想关心 aihot 流程——把它短路，永远返回"正常结束"。
+    避免 aihot 的 fetch_daily 产生真实网络请求，也避免它污染 sent/state 断言。"""
+    monkeypatch.setattr(push, "_push_aihot",
+                        lambda *a, **kw: True)
+
+
 @pytest.fixture
 def state_path(tmp_path, monkeypatch):
     p = tmp_path / "state.json"
