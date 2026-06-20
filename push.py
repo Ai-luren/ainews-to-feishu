@@ -20,10 +20,12 @@ from state import (
     is_aihot_pushed_today, is_pushed_today,
     juya_silent_days,
     mark_aihot_dead_alerted, mark_aihot_pushed_today,
-    mark_juya_dead_alerted, mark_pushed_today,
+    mark_juya_dead_alerted, mark_juya_degraded_alerted,
+    mark_pushed_today,
     record_aihot_entry_date, record_juya_entry_date,
     reset_aihot_failure, reset_failure,
     should_alert_aihot_dead, should_alert_juya_dead,
+    should_alert_juya_degraded,
 )
 
 BEIJING = pytz.timezone("Asia/Shanghai")
@@ -112,14 +114,23 @@ def _push_juya(webhook: str, secret: str, ops_webhook: str, ops_secret: str,
     try:
         card = parse_entry_to_card(entry)
         if card is None:
-            title = entry.get("title") or "<untitled>"
-            link = entry.get("link") or "#"
-            send_lark_text(webhook, secret, f"🤖 橘鸦 AI 早报 · {title}\n（解析降级）\n{link}")
-            if not backfill:
-                mark_pushed_today(STATE_PATH, today)
-            _alert(ops_webhook, ops_secret, "⚠️ juya 内容解析降级")
-            _log(f"[juya] [ok] pushed (degraded) {today}")
-            return True
+            # 解析降级：content:encoded 为空或格式异常。
+            # 实时模式：不标记已推送，返回 False 让后续 cron 重试。
+            # 补推模式：没有重试机制，直接发降级文本。
+            if backfill:
+                title = entry.get("title") or "<untitled>"
+                link = entry.get("link") or "#"
+                send_lark_text(webhook, secret, f"🤖 橘鸦 AI 早报 · {title}\n（解析降级）\n{link}")
+                _log(f"[juya] [ok] pushed (degraded/backfill) {today}")
+                return True
+
+            if should_alert_juya_degraded(STATE_PATH, today):
+                link = entry.get("link") or "#"
+                _alert(ops_webhook, ops_secret,
+                       f"⚠️ juya 内容解析降级，等待后续 cron 重试\n{link}")
+                mark_juya_degraded_alerted(STATE_PATH, today)
+            _log(f"[juya] [warn] degraded, will retry {today}")
+            return False
 
         send_lark_card(webhook, secret, card)
         if not backfill:

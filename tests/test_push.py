@@ -109,23 +109,51 @@ def test_failure_bumps_and_alerts_at_three(state_path, monkeypatch):
 
 
 def test_degraded_parse_falls_back_to_text(state_path, monkeypatch):
-    """parse_entry_to_card 返回 None → 降级为纯文本 + 运维群告警。"""
+    """parse_entry_to_card 返回 None → 降级：不标记已推送，发运维告警，返回失败允许重试。"""
     sent = []
     monkeypatch.setattr(push, "_today", lambda: date(2026, 4, 27))
     monkeypatch.setattr(push, "fetch_rss", lambda: "<rss/>")
-    # 伪造一个带 published_dt 的 entry（push.py 会 astimezone 打日志）
-    import pytz as _pytz
-    from datetime import datetime as _dt
-    fake_pub = _dt(2026, 4, 27, 1, 0, tzinfo=_pytz.utc)
     monkeypatch.setattr(
         push, "extract_today_entry",
         lambda xml, today: {
             "title": "2026-04-27", "link": "http://x",
             "content_html": "", "description": "",
-            "published_dt": fake_pub,
+            "published_dt": FAKE_PUB,
         },
     )
-    # 新语义：parse_entry_to_card 返回 None 表示"解析不出分组，请降级"
+    # parse_entry_to_card 返回 None 表示"解析不出分组，请降级"
+    monkeypatch.setattr(push, "parse_entry_to_card", lambda e: None)
+    monkeypatch.setattr(push, "send_lark_text",
+                        lambda url, secret, text: sent.append((url, text)))
+    with patch.dict(os.environ, ENV):
+        rc = push.main()
+    # 降级 = 失败，允许后续 cron 重试
+    assert rc == 1
+    # 不发降级文本到主群（避免重试时重复发送）
+    urls = [s[0] for s in sent]
+    assert ENV["LARK_WEBHOOK_URL"] not in urls
+    # 运维群收告警
+    assert ENV["LARK_OPS_WEBHOOK_URL"] in urls
+    # 不标记已推送 → 后续 cron 可以重试
+    assert json.loads(state_path.read_text())["last_pushed_date"] is None
+    # 降级告警标记为今天
+    assert json.loads(state_path.read_text())["juya_degraded_alerted_on"] == "2026-04-27"
+
+
+def test_degraded_backfill_sends_text(state_path, monkeypatch):
+    """补推模式下降级：没有重试机制，直接发降级文本。"""
+    sent = []
+    monkeypatch.setattr(push, "_today", lambda: date(2026, 4, 27))
+    monkeypatch.setattr(push, "_is_backfill", lambda: True)
+    monkeypatch.setattr(push, "fetch_rss", lambda: "<rss/>")
+    monkeypatch.setattr(
+        push, "extract_today_entry",
+        lambda xml, today: {
+            "title": "2026-04-27", "link": "http://x",
+            "content_html": "", "description": "",
+            "published_dt": FAKE_PUB,
+        },
+    )
     monkeypatch.setattr(push, "parse_entry_to_card", lambda e: None)
     monkeypatch.setattr(push, "send_lark_text",
                         lambda url, secret, text: sent.append((url, text)))
@@ -133,9 +161,35 @@ def test_degraded_parse_falls_back_to_text(state_path, monkeypatch):
         rc = push.main()
     assert rc == 0
     urls = [s[0] for s in sent]
-    assert ENV["LARK_WEBHOOK_URL"] in urls     # 主群收降级文本
-    assert ENV["LARK_OPS_WEBHOOK_URL"] in urls  # 运维群收告警
-    assert json.loads(state_path.read_text())["last_pushed_date"] == "2026-04-27"
+    assert ENV["LARK_WEBHOOK_URL"] in urls  # 主群收降级文本
+
+
+def test_degraded_alert_only_once_per_day(state_path, monkeypatch):
+    """同一天第二次降级不重发运维告警。"""
+    state_path.write_text(json.dumps({
+        "last_pushed_date": None,
+        "consecutive_failures": 0,
+        "juya_degraded_alerted_on": "2026-04-27",  # 今天已告警过
+    }))
+    sent = []
+    monkeypatch.setattr(push, "_today", lambda: date(2026, 4, 27))
+    monkeypatch.setattr(push, "fetch_rss", lambda: "<rss/>")
+    monkeypatch.setattr(
+        push, "extract_today_entry",
+        lambda xml, today: {
+            "title": "2026-04-27", "link": "http://x",
+            "content_html": "", "description": "",
+            "published_dt": FAKE_PUB,
+        },
+    )
+    monkeypatch.setattr(push, "parse_entry_to_card", lambda e: None)
+    monkeypatch.setattr(push, "send_lark_text",
+                        lambda url, secret, text: sent.append((url, text)))
+    with patch.dict(os.environ, ENV):
+        rc = push.main()
+    assert rc == 1
+    # 不重发告警
+    assert sent == []
 
 
 def test_backfill_refuses_to_duplicate_today(state_path, monkeypatch):

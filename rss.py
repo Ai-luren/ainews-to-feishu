@@ -69,11 +69,12 @@ def parse_feed(xml) -> List[dict]:
             pub = datetime.utcfromtimestamp(calendar.timegm(e.published_parsed)).replace(tzinfo=pytz.utc)
         except (OverflowError, ValueError):
             continue
+        # 只用 content:encoded（feedparser 的 content 字段）作为 HTML 正文。
+        # 不回退到 description —— 那是纯文本，没有 HTML 标签，
+        # 会导致 _extract_overview_groups 解析失败 → 降级模式。
         content_html = ""
         if "content" in e and e.content:
             content_html = e.content[0].value or ""
-        elif "description" in e:
-            content_html = getattr(e, "description", "") or ""
         entries.append({
             "title": getattr(e, "title", "<untitled>") or "<untitled>",
             "link": getattr(e, "link", "") or "",
