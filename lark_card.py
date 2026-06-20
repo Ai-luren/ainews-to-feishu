@@ -108,7 +108,16 @@ def parse_entry_to_card(entry: Mapping[str, Any]) -> Optional[Dict[str, Any]]:
     if not entry or not isinstance(entry, dict):
         return None
 
+    # feedparser 返回的 HTML 在 content[0].value 里，不是 content_html 字段
     content_html = _s(entry.get("content_html"))
+    if not content_html:
+        # 尝试从 content 列表获取
+        content_list = entry.get("content")
+        if content_list and isinstance(content_list, (list, tuple)) and len(content_list) > 0:
+            first = content_list[0]
+            if isinstance(first, dict):
+                content_html = _s(first.get("value"))
+    
     groups = _extract_overview_groups(content_html) if content_html else []
     if not groups:
         return None
