@@ -1,0 +1,99 @@
+name: daily-ai-news-push
+
+# 2026-06-16 起 GitHub Actions 强制 Node 24。
+# 本 workflow 使用的 actions/checkout@v6 与 actions/setup-python@v6
+# 已原生使用 node24 runtime，无需额外配置。
+
+on:
+  schedule:
+    # 兜底：仅北京 12:00（UTC 04:00）跑一次
+    # 主调度靠 cron-job.org（每 30 分钟一次，08:00-11:30 北京时间）
+    # cron-job.org 的准时性比 GitHub Actions 好得多
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+    inputs:
+      target_date:
+        description: '(可选) 指定推送日期 YYYY-MM-DD，留空=今天'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: daily-ai-news-push
+      cancel-in-progress: false
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          # fetch-depth:0 —— commit state.json 时 git pull --rebase
+          # 在 shallow clone 下可能报错，所以拉取完整历史
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Sanity check (import modules + verify RSS URL)
+        run: |
+          python -c "import lark, lark_card, rss, state, push; print('import ok:', rss.get_effective_rss_url())"
+
+      - name: Run tests
+        run: python -m pytest tests/ -v
+        env:
+          LARK_WEBHOOK_URL: https://example.com/hook/main
+          LARK_WEBHOOK_SECRET: test-secret
+          LARK_OPS_WEBHOOK_URL: https://example.com/hook/ops
+          LARK_OPS_WEBHOOK_SECRET: test-ops-secret
+
+      - name: Push to Lark
+        run: python push.py
+        env:
+          LARK_WEBHOOK_URL: ${{ secrets.LARK_WEBHOOK_URL }}
+          LARK_WEBHOOK_SECRET: ${{ secrets.LARK_WEBHOOK_SECRET }}
+          LARK_OPS_WEBHOOK_URL: ${{ secrets.LARK_OPS_WEBHOOK_URL }}
+          LARK_OPS_WEBHOOK_SECRET: ${{ secrets.LARK_OPS_WEBHOOK_SECRET }}
+          PUSH_TARGET_DATE: ${{ github.event.inputs.target_date }}
+
+      - name: commit state.json if changed
+        if: always()
+        env:
+          TARGET_DATE: ${{ github.event.inputs.target_date }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          if ! git diff --quiet state.json; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add state.json
+            DATE_TAG="${TARGET_DATE:-$(TZ=Asia/Shanghai date +%F)}"
+            MODE_TAG=""
+            if [ -n "$TARGET_DATE" ]; then
+              MODE_TAG=" (backfill)"
+            fi
+            git commit -m "chore(state): ${DATE_TAG}${MODE_TAG} [run ${RUN_ID}] [skip ci]"
+            pushed=0
+            for attempt in 1 2 3; do
+              if git push; then
+                pushed=1
+                break
+              fi
+              echo "push attempt $attempt failed, rebasing and retrying..."
+              git pull --rebase origin "${{ github.ref_name }}"
+              sleep 2
+            done
+            if [ "$pushed" = "0" ]; then
+              echo "::error:: state.json commit push failed after 3 attempts"
+              exit 1
+            fi
+          fi

@@ -1,0 +1,10 @@
+feedparser==6.0.11
+beautifulsoup4==4.12.3
+requests==2.32.3
+pytz==2024.2
+pytest==8.3.3
+pytest-mock==3.14.0
+responses==0.25.3
+# tests/test_rss_fetch.py 使用 requests-mock；项目内 tests/test_*_fetch.py
+# 通过 mock 覆盖 HTTP 路径，因此需要在 CI 中安装。
+requests-mock==1.12.1

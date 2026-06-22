@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+.env
+.DS_Store
+
+# 敏感信息备份（仅供本地查看，不提交）
+SENSITIVE_BACKUP*.md
+
+# state.json 由 workflow 自动管理，本地修改不提交
+state.json
