@@ -6,10 +6,8 @@ name: daily-ai-news-push
 
 on:
   schedule:
-    # 兜底：仅北京 15:00（UTC 07:00）跑一次
-    # 主调度靠 cron-job.org（每 30 分钟一次，08:00-14:30 北京时间）
-    # cron-job.org 的准时性比 GitHub Actions 好得多
-    # 15:00 兜底覆盖 follow-builders（UTC 06:17 ≈ 北京 14:17 更新）
+    # 北京时间 15:00（UTC 07:00）仅推 follow-builders。
+    # 橘鸦和 AI HOT 由 cron-job.org 在上午触发 workflow_dispatch。
     - cron: '0 7 * * *'
   workflow_dispatch:
     inputs:
@@ -17,9 +15,18 @@ on:
         description: '(可选) 指定推送日期 YYYY-MM-DD，留空=今天'
         required: false
         default: ''
+      push_mode:
+        description: '推送范围：morning=AI HOT+橘鸦，builders=大佬动态，all=全部'
+        required: false
+        default: 'morning'
+        type: choice
+        options:
+          - morning
+          - builders
+          - all
 
 permissions:
-  contents: write
+  contents: read  # 默认只读；commit state.json 步骤用 job 级 token 覆盖
 
 jobs:
   push:
@@ -66,9 +73,12 @@ jobs:
           LARK_OPS_WEBHOOK_URL: ${{ secrets.LARK_OPS_WEBHOOK_URL }}
           LARK_OPS_WEBHOOK_SECRET: ${{ secrets.LARK_OPS_WEBHOOK_SECRET }}
           PUSH_TARGET_DATE: ${{ github.event.inputs.target_date }}
+          PUSH_MODE: ${{ github.event_name == 'schedule' && 'builders' || github.event.inputs.push_mode || 'morning' }}
 
       - name: commit state.json if changed
         if: always()
+        permissions:
+          contents: write  # 仅此步骤需要写权限来 commit state.json
         env:
           TARGET_DATE: ${{ github.event.inputs.target_date }}
           RUN_ID: ${{ github.run_id }}
