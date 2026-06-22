@@ -11,3 +11,4 @@ SENSITIVE_BACKUP*.md
 
 # state.json 由 workflow 自动管理，本地修改不提交
 state.json
+.DS_Store
