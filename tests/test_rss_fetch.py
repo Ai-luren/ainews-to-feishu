@@ -9,7 +9,6 @@ import os as _os
 from datetime import date
 
 import pytest
-import pytz
 import responses
 
 import rss
