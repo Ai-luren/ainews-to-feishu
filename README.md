@@ -14,7 +14,7 @@
 
 ## 效果
 
-飞书群每天上午收到 3 条卡片消息：
+飞书群每天收到 3 条卡片消息：
 
 ### 橘鸦 AI 早报
 
@@ -94,6 +94,7 @@
 **第 7 步：确认明天能自动推送**
 - 告诉用户：明天上午 8:00 开始，每 30 分钟会自动检查
 - 如果 juya 发布了新日报，会在 30 分钟内推送到飞书群
+- follow-builders 的源数据通常在 14:00 后更新，15:00 GitHub Actions 兜底时会推送
 
 ### 常见问题（部署时）
 
@@ -118,7 +119,7 @@ aihot_card.py    # aihot 卡片渲染（JSON → 飞书卡片）
 builders_card.py # builders 卡片渲染（中英双语）
 state.py         # 推送状态管理（去重、失败计数、停更告警）
 state.json       # 运行状态（workflow 自动 commit）
-tests/           # 88 个测试
+tests/           # 90 个测试
 .github/workflows/daily-ai-news.yml  # GitHub Actions 调度
 ```
 
@@ -216,7 +217,7 @@ flowchart LR
 
 ```bash
 pip install -r requirements.txt
-pytest -v                    # 88 个测试，应全绿
+pytest -v                    # 90 个测试，应全绿
 
 # 本地跑一次推送：
 export LARK_WEBHOOK_URL="你的URL"
