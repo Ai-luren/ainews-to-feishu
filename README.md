@@ -4,7 +4,7 @@
 
 ## 它做什么
 
-- 每天上午 8:00-11:30，每 30 分钟检查一次两个源是否有新内容
+- 每天上午 8:00-12:30，每 30 分钟检查一次两个源是否有新内容
 - juya 有新日报 → 解析 RSS 里的 HTML 概览，渲染成飞书卡片推送
 - aihot 有新日报 → 解析 JSON API，渲染成飞书卡片推送
 - 两个源独立去重，当天推过就不再重复
@@ -15,20 +15,13 @@
 
 飞书群每天上午收到 2 条卡片消息：
 
-```
-🤖 橘鸦 AI 早报 · 2026-06-21
-  要闻
-  • Codex 宣布支持本地与远程主机间交接会话 ↗
-  • Anthropic 修复 Claude Code 额度异常 bug ↗
-  ...
-  [📖 查看完整日报] [🎬 B站]
+### 橘鸦 AI 早报
 
-🔥 AI HOT 日报 · 2026-06-21（15 条）
-  大模型
-  • GPT-5 发布 ...
-  ...
-  [📖 查看完整日报]
-```
+![juya card](assets/juya-card.png)
+
+### AI HOT 日报
+
+![aihot card](assets/aihot-card.png)
 
 ## 快速部署
 
@@ -82,7 +75,7 @@
   - `Content-Type: application/json`
 - **Body**: `{"ref":"master","inputs":{"target_date":""}}`
 - **Execution time / Timezone**: `Asia/Shanghai`
-- **Schedule**: Crontab 填 `*/30 8-11 * * *`
+- **Schedule**: Crontab 填 `*/30 8-12 * * *`
 - 点 "TEST RUN" → 返回 204 就是成功
 - 点 "CREATE"
 
