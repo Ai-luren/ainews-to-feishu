@@ -33,6 +33,19 @@ def _s(v) -> str:
         return ""
 
 
+def _safe_url(url: str) -> str:
+    """校验 URL scheme，只允许 http/https。"""
+    url = _s(url).strip()
+    if url.startswith(("http://", "https://")):
+        return url
+    return "#"
+
+
+def _escape_md(text: str) -> str:
+    """转义 markdown 特殊字符。"""
+    return _s(text).replace("[", "\\[").replace("]", "\\]").replace("(", "\\(").replace(")", "\\)")
+
+
 def _truncate(text: str, limit: int) -> str:
     """超长截断并加省略号。"""
     if not text or len(text) <= limit:
@@ -104,7 +117,7 @@ def parse_daily_to_card(daily: Mapping[str, Any]) -> Optional[Dict[str, Any]]:
             elements.append({"tag": "hr"})
         md_lines = [f"**{group['category']}**"]
         for item in group["items"]:
-            line = f"• [{_truncate(item['title'], 100)}]({item['url']})"
+            line = f"• [{_escape_md(_truncate(item['title'], 100))}]({_safe_url(item['url'])})"
             md_lines.append(line)
             if item.get("summary"):
                 md_lines.append(f"  {_truncate(item['summary'], 120)}")
