@@ -4,8 +4,7 @@ from typing import Any, Dict, List, Mapping, Optional
 from bs4 import BeautifulSoup
 
 
-# juya 分类 → 飞书卡片 header 颜色（未知分类回退 purple）。
-# 同时这个 dict 的 keys 就是"已知分类"集合，测试里直接迭代。
+# juya 分类集合。保留映射用于兼容现有分类测试和未来分区样式。
 CATEGORY_HEADER_TEMPLATE: Dict[str, str] = {
     "要闻": "indigo",
     "大模型与基础模型": "blue",
@@ -19,6 +18,7 @@ CATEGORY_HEADER_TEMPLATE: Dict[str, str] = {
     "人物与公司": "carmine",
 }
 DEFAULT_HEADER_TEMPLATE = "purple"
+JUYA_HEADER_TEMPLATE = "orange"
 
 # 兼容别名 —— 测试里用 CATEGORY_COLORS 来遍历所有已知分类
 CATEGORY_COLORS = tuple(CATEGORY_HEADER_TEMPLATE.keys())
@@ -136,7 +136,7 @@ def parse_entry_to_card(entry: Mapping[str, Any]) -> Optional[Dict[str, Any]]:
         return None
 
     title = _s(entry.get("title")) or "<untitled>"
-    link = _s(entry.get("link")) or "#"
+    link = _safe_url(entry.get("link"))
     videos = _extract_video_links(_s(entry.get("description")), content_html)
 
     elements: List[Dict[str, Any]] = []
@@ -160,7 +160,7 @@ def parse_entry_to_card(entry: Mapping[str, Any]) -> Optional[Dict[str, Any]]:
             "tag": "button",
             "text": {"tag": "plain_text", "content": "🎬 B站"},
             "type": "default",
-            "url": videos["bilibili"],
+            "url": _safe_url(videos["bilibili"]),
         })
     elements.append({"tag": "action", "actions": buttons})
     elements.append({
@@ -171,13 +171,10 @@ def parse_entry_to_card(entry: Mapping[str, Any]) -> Optional[Dict[str, Any]]:
         }],
     })
 
-    header_template = CATEGORY_HEADER_TEMPLATE.get(
-        groups[0].get("category", "") or "", DEFAULT_HEADER_TEMPLATE,
-    )
     return {
         "config": {"wide_screen_mode": True},
         "header": {
-            "template": header_template,
+            "template": JUYA_HEADER_TEMPLATE,
             "title": {"tag": "plain_text", "content": f"🤖 橘鸦 AI 早报 · {title}"},
         },
         "elements": elements,
