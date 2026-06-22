@@ -7,7 +7,7 @@ from typing import Any, Mapping
 
 import requests
 
-USER_AGENT = "design-team-ai-daily/1.0 (+https://github.com/ainews-to-feishu)"
+USER_AGENT = "ainews-to-feishu/1.0 (+https://github.com/ainews-to-feishu)"
 
 
 def _session() -> requests.Session:
