@@ -26,7 +26,7 @@ on:
           - all
 
 permissions:
-  contents: read  # 默认只读；commit state.json 步骤用 job 级 token 覆盖
+  contents: write  # commit state.json 需要；测试步骤不受影响（不操作 git）
 
 jobs:
   push:
@@ -77,8 +77,6 @@ jobs:
 
       - name: commit state.json if changed
         if: always()
-        permissions:
-          contents: write  # 仅此步骤需要写权限来 commit state.json
         env:
           TARGET_DATE: ${{ github.event.inputs.target_date }}
           RUN_ID: ${{ github.run_id }}
