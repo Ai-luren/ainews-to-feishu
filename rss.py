@@ -20,6 +20,9 @@ _DEAD_RSS_URLS = {
     "http://imjuya.github.io/juya-ai-daily/rss.xml",
 }
 RSS_URL = os.environ.get("RSS_URL") or _RSS_URL_DEFAULT
+if not RSS_URL.startswith(("http://", "https://")):
+    print(f"[warn] RSS_URL scheme 非法，回退到 {_RSS_URL_DEFAULT}", flush=True)
+    RSS_URL = _RSS_URL_DEFAULT
 if RSS_URL.rstrip("/") in _DEAD_RSS_URLS:
     print(f"[warn] RSS_URL={RSS_URL} 已废弃，回退到 {_RSS_URL_DEFAULT}", flush=True)
     RSS_URL = _RSS_URL_DEFAULT
