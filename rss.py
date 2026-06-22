@@ -24,7 +24,7 @@ if RSS_URL.rstrip("/") in _DEAD_RSS_URLS:
     RSS_URL = _RSS_URL_DEFAULT
 
 MAX_RSS_BYTES = 5 * 1024 * 1024      # 5MB — 正常一期 <2MB，超了多半被劫持
-USER_AGENT = "design-team-ai-daily/1.0 (+https://github.com/<你的用户名>/design-team-ai-daily)"
+USER_AGENT = "design-team-ai-daily/1.0 (+https://github.com/ainews-to-feishu)"
 _HTTP_TIMEOUT = (5, 20)               # connect, read
 
 
