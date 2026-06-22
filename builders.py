@@ -97,11 +97,13 @@ def get_top_tweets(feed_data: dict, limit: int = MAX_TWEETS) -> list:
     for builder in feed_data.get("x", []):
         name = builder.get("name", "")
         handle = builder.get("handle", "")
+        bio = builder.get("bio", "")
         for tweet in builder.get("tweets", []):
             engagement = tweet.get("likes", 0) + tweet.get("retweets", 0)
             all_tweets.append({
                 "name": name,
                 "handle": handle,
+                "bio": bio,
                 "text": tweet.get("text", ""),
                 "url": tweet.get("url", ""),
                 "likes": tweet.get("likes", 0),
@@ -125,7 +127,18 @@ def fetch_daily() -> Optional[dict]:
     for i, tweet in enumerate(tweets):
         tweet["text_zh"] = texts_zh[i]
 
-    # 翻译 builder 名字（可选，有些名字不需要翻译）
+    # 翻译 bio（按 handle 去重，避免同一人多次翻译）
+    unique_bios = {}
+    for t in tweets:
+        h = t["handle"]
+        if h and t.get("bio") and h not in unique_bios:
+            unique_bios[h] = t["bio"]
+    translated_bios = {h: _translate(b) for h, b in unique_bios.items()}
+    for tweet in tweets:
+        h = tweet["handle"]
+        if h in translated_bios:
+            tweet["bio_zh"] = translated_bios[h]
+
     return {
         "date": _parse_date(data.get("generatedAt")),
         "generated_at": data.get("generatedAt", ""),
