@@ -32,44 +32,80 @@
 
 ## 快速部署
 
-### 1. Fork 这个仓库
+把下面这段话发给你的 AI 助手，它会一步步带你完成：
 
-### 2. 在飞书群里建自定义机器人
+> 帮我部署一个 AI 每日早报推送系统。
+> 仓库地址：https://github.com/<你的用户名>/design-team-ai-daily
+> 我已经 Fork 了这个仓库。
+> 请按照 README 里的 "部署引导" 一步步带我完成。
 
-群设置 → 群机器人 → 添加机器人 → **自定义机器人** → 勾选**签名校验**
+### 部署引导（给 AI 助手的指令）
 
-拿到 webhook URL 和签名 secret。
+**第 1 步：确认仓库已 Fork**
+- 用户应该已经 Fork 了仓库。如果还没，先让他 Fork。
 
-### 3. 设置 GitHub Secrets
+**第 2 步：创建飞书自定义机器人**
+- 让用户打开飞书，进入一个群
+- 群设置 → 群机器人 → 添加机器人 → 自定义机器人
+- 勾选"签名校验"
+- 拿到：webhook URL（类似 `https://open.feishu.cn/open-apis/bot/v2/hook/xxxxx`）和签名 secret
+- **提醒用户：这两个信息不要截图发到群里**
 
-仓库 Settings → Secrets and variables → Actions → New repository secret，添加 4 个：
+**第 3 步：设置 GitHub Secrets**
+- 打开 Fork 后的仓库 → Settings → Secrets and variables → Actions
+- 点 "New repository secret"，依次添加 4 个：
 
 | Secret 名称 | 值 |
 |---|---|
-| `LARK_WEBHOOK_URL` | 飞书机器人 webhook URL |
+| `LARK_WEBHOOK_URL` | 飞书机器人的 webhook URL |
 | `LARK_WEBHOOK_SECRET` | 签名 secret |
-| `LARK_OPS_WEBHOOK_URL` | 运维告警 webhook（可以和上面同一个）|
-| `LARK_OPS_WEBHOOK_SECRET` | 运维告警 secret（可以和上面同一个）|
+| `LARK_OPS_WEBHOOK_URL` | 和上面同一个 URL（单群模式） |
+| `LARK_OPS_WEBHOOK_SECRET` | 和上面同一个 secret（单群模式） |
 
-### 4. 设置定时调度（二选一）
+**第 4 步：生成 GitHub PAT**
+- 打开 https://github.com/settings/tokens
+- 点 "Generate new token (classic)"
+- 名字填 `cron-job-daily-news`
+- 只勾选 `workflow` 权限
+- 有效期建议 90 天
+- 生成后复制 token（只显示一次）
 
-**方案 A：cron-job.org（推荐，准时）**
+**第 5 步：配置 cron-job.org**
+- 打开 https://cron-job.org → 注册/登录
+- 点 "Create cronjob"
+- **Title**: `ai-news-daily-push`
+- **URL**: `https://api.github.com/repos/<你的用户名>/design-team-ai-daily/actions/workflows/daily-ai-news.yml/dispatches`
+- **Method**: `POST`
+- **Headers**:
+  - `Authorization: Bearer <刚才复制的 GitHub PAT>`
+  - `Accept: application/vnd.github.v3+json`
+  - `Content-Type: application/json`
+- **Body**: `{"ref":"master","inputs":{"target_date":""}}`
+- **Execution time / Timezone**: `Asia/Shanghai`
+- **Schedule**: Crontab 填 `*/30 8-11 * * *`
+- 点 "TEST RUN" → 返回 204 就是成功
+- 点 "CREATE"
 
-1. 去 [cron-job.org](https://cron-job.org) 注册，创建 cronjob
-2. URL 填：`https://api.github.com/repos/<你的用户名>/design-team-ai-daily/actions/workflows/daily-ai-news.yml/dispatches`
-3. Method: `POST`
-4. Headers: `Authorization: Bearer <你的GitHub PAT>` / `Accept: application/vnd.github+json` / `Content-Type: application/json`
-5. Body: `{"ref":"master","inputs":{"target_date":""}}`
-6. 时区: `Asia/Shanghai`
-7. Crontab: `*/30 8-11 * * *`（北京时间 8:00-11:30，每 30 分钟）
+**第 6 步：验证**
+- 打开仓库 → Actions → `daily-ai-news-push`
+- 点 "Run workflow" → 留空 → "Run workflow"
+- 等 30-60 秒，看飞书群是否收到卡片
+- 如果 juya 今天还没发，日志会显示 `[skip] not updated`，这是正常的
+- 如果收到卡片 → 部署成功
 
-**方案 B：只用 GitHub Actions（简单，但可能延迟 1-2 小时）**
+**第 7 步：确认明天能自动推送**
+- 告诉用户：明天上午 8:00 开始，每 30 分钟会自动检查
+- 如果 juya 发布了新日报，会在 30 分钟内推送到飞书群
 
-仓库已经配好了 `schedule`，北京时间 12:00 兜底跑一次。如果 juya 在上午发布，这个时间够用。
+### 常见问题（部署时）
 
-### 5. 验证
-
-GitHub → Actions → `daily-ai-news-push` → Run workflow → 留空 → 看飞书群是否收到卡片。
+| 问题 | 原因 | 解决 |
+|---|---|---|
+| TEST RUN 返回 404 | URL 里的用户名或仓库名填错了 | 检查 `<你的用户名>` 和仓库名 |
+| TEST RUN 返回 401/403 | PAT 权限不够或已过期 | 重新生成 PAT，只勾 `workflow` |
+| Run workflow 后飞书没收到 | Secrets 填错了 | 检查 4 个 Secrets 的值 |
+| 日志显示 `[skip] not updated` | juya 今天还没发 | 正常，等 juya 发布后会自动推 |
+| 收到的是纯文本不是卡片 | 卡片解析失败 | 检查 juya RSS 格式是否变了 |
 
 ## 项目结构
 
