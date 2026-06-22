@@ -36,6 +36,19 @@ def _s(v) -> str:
         return ""
 
 
+def _safe_url(url: str) -> str:
+    """校验 URL scheme，只允许 http/https，防止 javascript:/data: 注入。"""
+    url = _s(url).strip()
+    if url.startswith(("http://", "https://")):
+        return url
+    return "#"
+
+
+def _escape_md(text: str) -> str:
+    """转义 markdown 特殊字符，防止链接劫持。"""
+    return _s(text).replace("[", "\\[").replace("]", "\\]").replace("(", "\\(").replace(")", "\\)")
+
+
 def _extract_overview_groups(html: str) -> List[Dict[str, Any]]:
     """从 juya HTML 摘要区抽出「分类 → 条目列表」的结构。"""
     if not html or not isinstance(html, str):
@@ -132,8 +145,8 @@ def parse_entry_to_card(entry: Mapping[str, Any]) -> Optional[Dict[str, Any]]:
             elements.append({"tag": "hr"})
         md_lines = [f"**{g['category']}**"]
         for item in g["items"]:
-            url = _s(item.get("url")) or "#"
-            md_lines.append(f"• [{_s(item.get('title'))}]({url})")
+            url = _safe_url(item.get("url"))
+            md_lines.append(f"• [{_escape_md(item.get('title'))}]({url})")
         elements.append({"tag": "div", "text": {"tag": "lark_md", "content": "\n".join(md_lines)}})
 
     buttons: List[Dict[str, Any]] = [{
