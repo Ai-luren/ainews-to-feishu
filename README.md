@@ -28,7 +28,7 @@
 把下面这段话发给你的 AI 助手，它会一步步带你完成：
 
 > 帮我部署一个 AI 每日早报推送系统。
-> 仓库地址：https://github.com/<你的用户名>/design-team-ai-daily
+> 仓库地址：https://github.com/<你的用户名>/ainews-to-feishu
 > 我已经 Fork 了这个仓库。
 > 请按照 README 里的 "部署引导" 一步步带我完成。
 
@@ -67,7 +67,7 @@
 - 打开 https://cron-job.org → 注册/登录
 - 点 "Create cronjob"
 - **Title**: `ai-news-daily-push`
-- **URL**: `https://api.github.com/repos/<你的用户名>/design-team-ai-daily/actions/workflows/daily-ai-news.yml/dispatches`
+- **URL**: `https://api.github.com/repos/<你的用户名>/ainews-to-feishu/actions/workflows/daily-ai-news.yml/dispatches`
 - **Method**: `POST`
 - **Headers**:
   - `Authorization: Bearer <刚才复制的 GitHub PAT>`
