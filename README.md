@@ -229,7 +229,7 @@ python push.py
 
 ## License
 
-MIT
+MIT (c) 2026 Ai路人 — 详见 [LICENSE](LICENSE)
 
 ---
 
