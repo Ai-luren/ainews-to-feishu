@@ -33,11 +33,11 @@
 ## Task 1: 项目骨架
 
 **Files:**
-- Create: `<项目路径>/design-team-ai-daily/.gitignore`
-- Create: `<项目路径>/design-team-ai-daily/requirements.txt`
-- Create: `<项目路径>/design-team-ai-daily/state.json`
-- Create: `<项目路径>/design-team-ai-daily/pytest.ini`
-- Create: `<项目路径>/design-team-ai-daily/tests/__init__.py`
+- Create: `<项目路径>/ainews-to-feishu/.gitignore`
+- Create: `<项目路径>/ainews-to-feishu/requirements.txt`
+- Create: `<项目路径>/ainews-to-feishu/state.json`
+- Create: `<项目路径>/ainews-to-feishu/pytest.ini`
+- Create: `<项目路径>/ainews-to-feishu/tests/__init__.py`
 
 - [ ] **Step 1.1: 写 .gitignore**
 
@@ -84,7 +84,7 @@ python_files = test_*.py
 - [ ] **Step 1.6: 装依赖并验证**
 
 ```bash
-cd <项目路径>/design-team-ai-daily
+cd <项目路径>/ainews-to-feishu
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
@@ -104,8 +104,8 @@ git commit -m "chore: project skeleton"
 ## Task 2: 飞书签名函数 `lark_sign`
 
 **Files:**
-- Create: `<项目路径>/design-team-ai-daily/lark.py`
-- Create: `<项目路径>/design-team-ai-daily/tests/test_lark_sign.py`
+- Create: `<项目路径>/ainews-to-feishu/lark.py`
+- Create: `<项目路径>/ainews-to-feishu/tests/test_lark_sign.py`
 
 飞书自定义机器人签名：`HMAC-SHA256(secret, f"{timestamp}\n{secret}")` → base64。
 
@@ -188,8 +188,8 @@ git commit -m "feat(lark): HMAC-SHA256 signing for Lark bot webhooks"
 ## Task 3: 纯文本推送 `send_lark_text`
 
 **Files:**
-- Modify: `<项目路径>/design-team-ai-daily/lark.py`
-- Create: `<项目路径>/design-team-ai-daily/tests/test_send_lark_text.py`
+- Modify: `<项目路径>/ainews-to-feishu/lark.py`
+- Create: `<项目路径>/ainews-to-feishu/tests/test_send_lark_text.py`
 
 用于运维群告警。
 
@@ -296,9 +296,9 @@ git commit -m "feat(lark): send_lark_text with sign verification"
 ## Task 4: RSS 拉取 + 当日条目提取
 
 **Files:**
-- Create: `<项目路径>/design-team-ai-daily/rss.py`
-- Create: `<项目路径>/design-team-ai-daily/tests/fixtures/juya_sample.xml`
-- Create: `<项目路径>/design-team-ai-daily/tests/test_rss.py`
+- Create: `<项目路径>/ainews-to-feishu/rss.py`
+- Create: `<项目路径>/ainews-to-feishu/tests/fixtures/juya_sample.xml`
+- Create: `<项目路径>/ainews-to-feishu/tests/test_rss.py`
 
 - [ ] **Step 4.1: 抓一份真实 RSS 样本作为 fixture**
 
@@ -424,8 +424,8 @@ git commit -m "feat(rss): fetch and extract today's juya entry in Beijing TZ"
 ## Task 5: state.json 读写 `is_pushed_today` / `mark_pushed_today`
 
 **Files:**
-- Create: `<项目路径>/design-team-ai-daily/state.py`
-- Create: `<项目路径>/design-team-ai-daily/tests/test_state.py`
+- Create: `<项目路径>/ainews-to-feishu/state.py`
+- Create: `<项目路径>/ainews-to-feishu/tests/test_state.py`
 
 - [ ] **Step 5.1: 写失败测试**
 
@@ -540,8 +540,8 @@ git commit -m "feat(state): dedup + consecutive-failure counter"
 ## Task 6: HTML → 飞书卡片 JSON `parse_entry_to_card`
 
 **Files:**
-- Create: `<项目路径>/design-team-ai-daily/lark_card.py`
-- Create: `<项目路径>/design-team-ai-daily/tests/test_lark_card.py`
+- Create: `<项目路径>/ainews-to-feishu/lark_card.py`
+- Create: `<项目路径>/ainews-to-feishu/tests/test_lark_card.py`
 
 ### 6.1 设计说明
 
@@ -801,8 +801,8 @@ git commit -m "feat(card): parse juya HTML into Lark interactive card"
 ## Task 7: 卡片推送 `send_lark_card`
 
 **Files:**
-- Modify: `<项目路径>/design-team-ai-daily/lark.py`
-- Create: `<项目路径>/design-team-ai-daily/tests/test_send_lark_card.py`
+- Modify: `<项目路径>/ainews-to-feishu/lark.py`
+- Create: `<项目路径>/ainews-to-feishu/tests/test_send_lark_card.py`
 
 - [ ] **Step 7.1: 写失败测试**
 
@@ -878,8 +878,8 @@ git commit -m "feat(lark): send_lark_card for interactive messages"
 ## Task 8: 主流程 `push.py`
 
 **Files:**
-- Create: `<项目路径>/design-team-ai-daily/push.py`
-- Create: `<项目路径>/design-team-ai-daily/tests/test_push.py`
+- Create: `<项目路径>/ainews-to-feishu/push.py`
+- Create: `<项目路径>/ainews-to-feishu/tests/test_push.py`
 
 ### 8.1 行为（对照 spec §6）
 
@@ -1165,7 +1165,7 @@ git commit -m "feat(push): main flow with dedup, degraded fallback, failure aler
 ## Task 9: GitHub Actions workflow
 
 **Files:**
-- Create: `<项目路径>/design-team-ai-daily/.github/workflows/push.yml`
+- Create: `<项目路径>/ainews-to-feishu/.github/workflows/push.yml`
 
 ### 9.1 要点
 
@@ -1245,7 +1245,7 @@ git commit -m "ci: GitHub Actions cron workflow for 6x/day polling"
 ## Task 10: README 运维手册
 
 **Files:**
-- Create: `<项目路径>/design-team-ai-daily/README.md`
+- Create: `<项目路径>/ainews-to-feishu/README.md`
 
 - [ ] **Step 10.1: 写 README**
 
@@ -1258,7 +1258,7 @@ git commit -m "ci: GitHub Actions cron workflow for 6x/day polling"
 - 故障排查：早报没到怎么办（5 步自查）
 
 ```markdown
-# design-team-ai-daily
+# ainews-to-feishu
 
 每日把 [橘鸦 AI 早报](https://imjuya.github.io/juya-ai-daily/) 自动推送到设计团队飞书群。
 
@@ -1363,17 +1363,17 @@ mkdir -p <你的用户目录>/.claude/skills/daily-ai-news
 ```markdown
 ---
 name: daily-ai-news
-description: Use when the user wants to set up, test, configure, or troubleshoot the design-team-ai-daily push system — a GitHub-Actions-based daily Lark push of juya AI news to a design team group. Triggers on phrases like "/daily-ai-news setup", "早报没到", "换个飞书群", "改推送时间", "手动推一次测试".
+description: Use when the user wants to set up, test, configure, or troubleshoot the ainews-to-feishu push system — a GitHub-Actions-based daily Lark push of juya AI news to a design team group. Triggers on phrases like "/daily-ai-news setup", "早报没到", "换个飞书群", "改推送时间", "手动推一次测试".
 ---
 
 # Daily AI News Skill
 
 ## Overview
 
-辅助运维 [design-team-ai-daily](file://<项目路径>/design-team-ai-daily) 这个项目。项目本身的推送逻辑跑在 GitHub Actions 上，与 Claude 无关；skill 的作用是帮用户搭建、配置、排障。
+辅助运维 [ainews-to-feishu](file://<项目路径>/ainews-to-feishu) 这个项目。项目本身的推送逻辑跑在 GitHub Actions 上，与 Claude 无关；skill 的作用是帮用户搭建、配置、排障。
 
-**Project home:** `<项目路径>/design-team-ai-daily`
-**GitHub repo:** `<你的用户名>/design-team-ai-daily` (private)
+**Project home:** `<项目路径>/ainews-to-feishu`
+**GitHub repo:** `<你的用户名>/ainews-to-feishu` (private)
 
 ## When to Use
 
@@ -1389,9 +1389,9 @@ description: Use when the user wants to set up, test, configure, or troubleshoot
 ## Setup 流程
 
 1. 确认前置：用户有 `gh` CLI 登录、飞书群管理员权限
-2. 在项目目录：`cd <项目路径>/design-team-ai-daily`
+2. 在项目目录：`cd <项目路径>/ainews-to-feishu`
 3. 引导用户去飞书拿 2 对 webhook + secret（设计群 + 运维群），**开启签名校验**
-4. 用 `gh repo create <你的用户名>/design-team-ai-daily --private --source=. --push` 建仓库并推
+4. 用 `gh repo create <你的用户名>/ainews-to-feishu --private --source=. --push` 建仓库并推
 5. 用 `gh secret set` 设置 4 个密钥（`LARK_WEBHOOK_URL` / `LARK_WEBHOOK_SECRET` / `LARK_OPS_WEBHOOK_URL` / `LARK_OPS_WEBHOOK_SECRET`）
 6. `gh workflow run daily-ai-news-push.yml` 手动触发一次
 7. `gh run watch` 看实时日志
@@ -1403,7 +1403,7 @@ description: Use when the user wants to set up, test, configure, or troubleshoot
 
 "强制推一次"意味着：绕过 `is_pushed_today` 检查，而且推到**运维群**而不是正式群，避免打扰。
 
-1. `cd <项目路径>/design-team-ai-daily`
+1. `cd <项目路径>/ainews-to-feishu`
 2. 临时把 state.json 的 `last_pushed_date` 改成 null（或用环境变量覆盖 webhook 指向运维群）
 3. 本地跑 `LARK_WEBHOOK_URL=$LARK_OPS_WEBHOOK_URL LARK_WEBHOOK_SECRET=$LARK_OPS_WEBHOOK_SECRET LARK_OPS_WEBHOOK_URL=... LARK_OPS_WEBHOOK_SECRET=... python push.py`
 4. 或用 `gh workflow run` + 一个临时 input 参数（未来扩展）
@@ -1463,7 +1463,7 @@ cd <你的用户目录>/.claude && git rev-parse --is-inside-work-tree 2>/dev/nu
 - [ ] **Step 12.1: 本地跑一次 `push.py` 打向运维群**
 
 ```bash
-cd <项目路径>/design-team-ai-daily
+cd <项目路径>/ainews-to-feishu
 source .venv/bin/activate
 export LARK_WEBHOOK_URL="<运维群 webhook>"        # 故意指向运维群，别骚扰设计团队
 export LARK_WEBHOOK_SECRET="<运维群 secret>"
@@ -1501,7 +1501,7 @@ Expected: 运行成功，运维群收到卡片（如果 today 有新日报且之
 - [ ] **Step 12.5: 最终 commit（如有 state 变更）**
 
 ```bash
-cd <项目路径>/design-team-ai-daily
+cd <项目路径>/ainews-to-feishu
 git status
 # 如 state.json 变了，commit；否则跳过
 ```
