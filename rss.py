@@ -1,3 +1,4 @@
+import calendar
 import os
 import re
 from datetime import date, datetime
@@ -65,8 +66,7 @@ def parse_feed(xml) -> List[dict]:
         if not getattr(e, "published_parsed", None):
             continue
         try:
-            import calendar
-            pub = datetime.utcfromtimestamp(calendar.timegm(e.published_parsed)).replace(tzinfo=pytz.utc)
+            pub = datetime.fromtimestamp(calendar.timegm(e.published_parsed), tz=pytz.utc)
         except (OverflowError, ValueError):
             continue
         # 只用 content:encoded（feedparser 的 content 字段）作为 HTML 正文。
