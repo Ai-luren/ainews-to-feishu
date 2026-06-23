@@ -1,6 +1,6 @@
 """每日推送主流程。
 
-顺序：aihot 先，juya 后，builders 最后。三个源独立去重/告警。
+支持 morning / builders / all 三种模式，三个源独立去重和告警。
 """
 import os
 import sys
@@ -41,6 +41,7 @@ DEAD_THRESHOLD = 3
 
 REQUIRED_ENVS = ["LARK_WEBHOOK_URL", "LARK_WEBHOOK_SECRET",
                   "LARK_OPS_WEBHOOK_URL", "LARK_OPS_WEBHOOK_SECRET"]
+PUSH_MODES = {"morning", "builders", "all"}
 
 
 def _log(msg: str, err: bool = False) -> None:
@@ -60,6 +61,17 @@ def _today() -> date:
 
 def _is_backfill() -> bool:
     return bool(os.environ.get("PUSH_TARGET_DATE", "").strip())
+
+
+def _push_mode() -> str:
+    mode = os.environ.get("PUSH_MODE", "all").strip().lower() or "all"
+    if mode not in PUSH_MODES:
+        _log(
+            f"[error] PUSH_MODE 非法: {mode}（可选 morning/builders/all）",
+            err=True,
+        )
+        sys.exit(2)
+    return mode
 
 
 def _check_env() -> None:
@@ -250,9 +262,13 @@ def _push_builders(webhook: str, secret: str, ops_webhook: str, ops_secret: str,
                    today: date, backfill: bool) -> bool:
     """推送 follow-builders 推文动态，返回 True=正常结束，False=失败"""
     # 去重
-    if not backfill and is_builders_pushed_today(STATE_PATH, today):
-        _log(f"[builders] [skip] already pushed today ({today})")
-        return True
+    if is_builders_pushed_today(STATE_PATH, today):
+        if backfill and today == datetime.now(BEIJING).date():
+            _log("[builders] [skip] backfill 今天已推送")
+            return True
+        if not backfill:
+            _log(f"[builders] [skip] already pushed today ({today})")
+            return True
 
     # 拉取 + 翻译
     try:
@@ -314,11 +330,24 @@ def main() -> int:
 
     today = _today()
     backfill = _is_backfill()
-    _log(f"[meta] today={today} backfill={backfill}")
+    mode = _push_mode()
+    _log(f"[meta] today={today} backfill={backfill} mode={mode}")
 
-    aihot_ok = _push_aihot(webhook, secret, ops_webhook, ops_secret, today, backfill)
-    juya_ok = _push_juya(webhook, secret, ops_webhook, ops_secret, today, backfill)
-    builders_ok = _push_builders(webhook, secret, ops_webhook, ops_secret, today, backfill)
+    aihot_ok = True
+    juya_ok = True
+    builders_ok = True
+
+    if mode in {"morning", "all"}:
+        aihot_ok = _push_aihot(
+            webhook, secret, ops_webhook, ops_secret, today, backfill,
+        )
+        juya_ok = _push_juya(
+            webhook, secret, ops_webhook, ops_secret, today, backfill,
+        )
+    if mode in {"builders", "all"}:
+        builders_ok = _push_builders(
+            webhook, secret, ops_webhook, ops_secret, today, backfill,
+        )
 
     if aihot_ok and juya_ok and builders_ok:
         _log("[meta] all completed")
