@@ -3,6 +3,8 @@ from typing import Any, Dict, List, Mapping, Optional
 
 from bs4 import BeautifulSoup
 
+from card_utils import _escape_md, _safe_url, _s
+
 
 # juya 分类集合。保留映射用于兼容现有分类测试和未来分区样式。
 CATEGORY_HEADER_TEMPLATE: Dict[str, str] = {
@@ -22,31 +24,6 @@ JUYA_HEADER_TEMPLATE = "orange"
 
 # 兼容别名 —— 测试里用 CATEGORY_COLORS 来遍历所有已知分类
 CATEGORY_COLORS = tuple(CATEGORY_HEADER_TEMPLATE.keys())
-
-
-def _s(v) -> str:
-    """把任意值安全转成字符串；None / 空串统一落在默认值。"""
-    if v is None:
-        return ""
-    if isinstance(v, str):
-        return v
-    try:
-        return str(v)
-    except Exception:
-        return ""
-
-
-def _safe_url(url: str) -> str:
-    """校验 URL scheme，只允许 http/https，防止 javascript:/data: 注入。"""
-    url = _s(url).strip()
-    if url.startswith(("http://", "https://")):
-        return url
-    return "#"
-
-
-def _escape_md(text: str) -> str:
-    """转义 markdown 特殊字符，防止链接劫持。"""
-    return _s(text).replace("[", "\\[").replace("]", "\\]").replace("(", "\\(").replace(")", "\\)")
 
 
 def _extract_overview_groups(html: str) -> List[Dict[str, Any]]:
