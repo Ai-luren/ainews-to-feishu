@@ -105,6 +105,8 @@
 | Run workflow 后飞书没收到 | Secrets 填错了 | 检查 4 个 Secrets 的值 |
 | 日志显示 `[skip] not updated` | juya 今天还没发 | 正常，等 juya 发布后会自动推 |
 | 收到的是纯文本不是卡片 | 卡片解析失败 | 检查 juya RSS 格式是否变了 |
+| 日志显示 `frequency limited` | 飞书 webhook 频率限制（1 分钟内最多 5 条） | 代码已内置 30 秒等待 + 自动重试；正常 cron 不会触发，仅手动连续推送时可能遇到 |
+| GitHub 邮箱收到失败通知 | workflow 运行失败 | 去仓库 Actions 页面查看具体日志；可在 Settings → Notifications 关闭邮件通知 |
 
 ## 项目结构
 
