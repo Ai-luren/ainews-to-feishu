@@ -38,6 +38,7 @@ from state import (
 BEIJING = pytz.timezone("Asia/Shanghai")
 STATE_PATH = Path(__file__).parent / "state.json"
 DEAD_THRESHOLD = 3
+FAILURE_THRESHOLD = 3
 
 REQUIRED_ENVS = ["LARK_WEBHOOK_URL", "LARK_WEBHOOK_SECRET",
                   "LARK_OPS_WEBHOOK_URL", "LARK_OPS_WEBHOOK_SECRET"]
@@ -46,6 +47,32 @@ PUSH_MODES = {"morning", "builders", "all"}
 
 def _log(msg: str, err: bool = False) -> None:
     print(msg, file=sys.stderr if err else sys.stdout, flush=True)
+
+
+def _handle_failure(source: str, bump_fn, reset_fn,
+                    ops_webhook: str, ops_secret: str, e: Exception,
+                    stage: str = "拉取") -> bool:
+    """统一的失败处理：计数 + 告警 + 重置。返回 False。"""
+    n = bump_fn(STATE_PATH)
+    _log(f"[{source}] [fail] ({n}/{FAILURE_THRESHOLD}) {stage}: {e}", err=True)
+    if n >= FAILURE_THRESHOLD:
+        _alert(ops_webhook, ops_secret,
+               f"⚠️ {source} 连续 {n} 次{stage}失败\n错误: {e}")
+        reset_fn(STATE_PATH)
+    return False
+
+
+def _handle_dead_alert(source: str, url: str, silent_fn, last_date_fn,
+                       should_fn, mark_fn,
+                       ops_webhook: str, ops_secret: str,
+                       today: date) -> None:
+    """统一的停更告警。"""
+    silent = silent_fn(STATE_PATH, today)
+    if silent and silent >= DEAD_THRESHOLD and should_fn(STATE_PATH, today):
+        last = last_date_fn(STATE_PATH)
+        _alert(ops_webhook, ops_secret,
+               f"⚠️ {source} 连续 {silent} 天未更新（最后: {last}）\n{url}")
+        mark_fn(STATE_PATH, today)
 
 
 def _today() -> date:
@@ -106,22 +133,17 @@ def _push_juya(webhook: str, secret: str, ops_webhook: str, ops_secret: str,
         _log(f"[juya] [warn] fetch failed: {e}", err=True)
         if backfill:
             return False
-        n = bump_failure(STATE_PATH)
-        if n >= 3:
-            _alert(ops_webhook, ops_secret, f"⚠️ juya 连续 {n} 次拉取失败\n错误: {e}")
-            reset_failure(STATE_PATH)
-        return False
+        return _handle_failure("juya", bump_failure, reset_failure,
+                               ops_webhook, ops_secret, e, "拉取")
 
     # 无内容
     if entry is None:
         _log(f"[juya] [skip] not updated for {today}")
         if not backfill:
-            silent = juya_silent_days(STATE_PATH, today)
-            if silent and silent >= DEAD_THRESHOLD and should_alert_juya_dead(STATE_PATH, today):
-                last = get_last_juya_entry_date(STATE_PATH)
-                _alert(ops_webhook, ops_secret,
-                       f"⚠️ juya 连续 {silent} 天未更新（最后: {last}）\nhttps://daily.juya.uk/")
-                mark_juya_dead_alerted(STATE_PATH, today)
+            _handle_dead_alert("juya", "https://daily.juya.uk/",
+                               juya_silent_days, get_last_juya_entry_date,
+                               should_alert_juya_dead, mark_juya_dead_alerted,
+                               ops_webhook, ops_secret, today)
         return True
 
     # 记录日期
@@ -172,12 +194,8 @@ def _push_juya(webhook: str, secret: str, ops_webhook: str, ops_secret: str,
         if backfill:
             _log(f"[juya] [fail] backfill: {e}", err=True)
             return False
-        n = bump_failure(STATE_PATH)
-        _log(f"[juya] [fail] ({n}/3): {e}", err=True)
-        if n >= 3:
-            _alert(ops_webhook, ops_secret, f"⚠️ juya 推送连续 {n} 次失败\n错误: {e}")
-            reset_failure(STATE_PATH)
-        return False
+        return _handle_failure("juya", bump_failure, reset_failure,
+                               ops_webhook, ops_secret, e, "推送")
 
 
 def _push_aihot(webhook: str, secret: str, ops_webhook: str, ops_secret: str,
@@ -198,11 +216,8 @@ def _push_aihot(webhook: str, secret: str, ops_webhook: str, ops_secret: str,
         _log(f"[aihot] [warn] fetch failed: {e}", err=True)
         if backfill:
             return False
-        n = bump_aihot_failure(STATE_PATH)
-        if n >= 3:
-            _alert(ops_webhook, ops_secret, f"⚠️ aihot 连续 {n} 次拉取失败\n错误: {e}")
-            reset_aihot_failure(STATE_PATH)
-        return False
+        return _handle_failure("aihot", bump_aihot_failure, reset_aihot_failure,
+                               ops_webhook, ops_secret, e, "拉取")
 
     # 无内容时尝试最新一期
     if not has_content(daily):
@@ -215,12 +230,10 @@ def _push_aihot(webhook: str, secret: str, ops_webhook: str, ops_secret: str,
     if not has_content(daily):
         _log(f"[aihot] [skip] no content for {today}")
         if not backfill:
-            silent = aihot_silent_days(STATE_PATH, today)
-            if silent and silent >= DEAD_THRESHOLD and should_alert_aihot_dead(STATE_PATH, today):
-                last = get_last_aihot_entry_date(STATE_PATH)
-                _alert(ops_webhook, ops_secret,
-                       f"⚠️ aihot 连续 {silent} 天未更新（最后: {last}）\n{AIHOT_BASE_URL}/")
-                mark_aihot_dead_alerted(STATE_PATH, today)
+            _handle_dead_alert("aihot", f"{AIHOT_BASE_URL}/",
+                               aihot_silent_days, get_last_aihot_entry_date,
+                               should_alert_aihot_dead, mark_aihot_dead_alerted,
+                               ops_webhook, ops_secret, today)
         return True
 
     # 记录日期
@@ -250,12 +263,8 @@ def _push_aihot(webhook: str, secret: str, ops_webhook: str, ops_secret: str,
         if backfill:
             _log(f"[aihot] [fail] backfill: {e}", err=True)
             return False
-        n = bump_aihot_failure(STATE_PATH)
-        _log(f"[aihot] [fail] ({n}/3): {e}", err=True)
-        if n >= 3:
-            _alert(ops_webhook, ops_secret, f"⚠️ aihot 推送连续 {n} 次失败\n错误: {e}")
-            reset_aihot_failure(STATE_PATH)
-        return False
+        return _handle_failure("aihot", bump_aihot_failure, reset_aihot_failure,
+                               ops_webhook, ops_secret, e, "推送")
 
 
 def _push_builders(webhook: str, secret: str, ops_webhook: str, ops_secret: str,
@@ -277,22 +286,17 @@ def _push_builders(webhook: str, secret: str, ops_webhook: str, ops_secret: str,
         _log(f"[builders] [warn] fetch failed: {e}", err=True)
         if backfill:
             return False
-        n = bump_builders_failure(STATE_PATH)
-        if n >= 3:
-            _alert(ops_webhook, ops_secret, f"⚠️ builders 连续 {n} 次拉取失败\n错误: {e}")
-            reset_builders_failure(STATE_PATH)
-        return False
+        return _handle_failure("builders", bump_builders_failure, reset_builders_failure,
+                               ops_webhook, ops_secret, e, "拉取")
 
     if not daily or not daily.get("tweets"):
         _log(f"[builders] [skip] no content for {today}")
         if not backfill:
-            silent = builders_silent_days(STATE_PATH, today)
-            if silent and silent >= DEAD_THRESHOLD and should_alert_builders_dead(STATE_PATH, today):
-                last = get_last_builders_entry_date(STATE_PATH)
-                _alert(ops_webhook, ops_secret,
-                       f"⚠️ follow-builders 连续 {silent} 天未更新（最后: {last}）\n"
-                       "https://github.com/zarazhangrui/follow-builders")
-                mark_builders_dead_alerted(STATE_PATH, today)
+            _handle_dead_alert("follow-builders",
+                               "https://github.com/zarazhangrui/follow-builders",
+                               builders_silent_days, get_last_builders_entry_date,
+                               should_alert_builders_dead, mark_builders_dead_alerted,
+                               ops_webhook, ops_secret, today)
         return True
 
     # 记录日期
@@ -313,12 +317,8 @@ def _push_builders(webhook: str, secret: str, ops_webhook: str, ops_secret: str,
         if backfill:
             _log(f"[builders] [fail] backfill: {e}", err=True)
             return False
-        n = bump_builders_failure(STATE_PATH)
-        _log(f"[builders] [fail] ({n}/3): {e}", err=True)
-        if n >= 3:
-            _alert(ops_webhook, ops_secret, f"⚠️ builders 推送连续 {n} 次失败\n错误: {e}")
-            reset_builders_failure(STATE_PATH)
-        return False
+        return _handle_failure("builders", bump_builders_failure, reset_builders_failure,
+                               ops_webhook, ops_secret, e, "推送")
 
 
 def main() -> int:
