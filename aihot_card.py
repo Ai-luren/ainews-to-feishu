@@ -8,6 +8,8 @@
 """
 from typing import Any, Dict, List, Mapping, Optional
 
+from card_utils import _escape_md, _safe_url, _s, _truncate
+
 
 # aihot section label → 飞书卡片 header 颜色映射。
 # 跟 juya 不同：aihot 的 section label 是中文且固定。
@@ -19,38 +21,6 @@ _AIHOT_HEADER_TEMPLATE: Dict[str, str] = {
     "技巧与观点": "green",
 }
 _DEFAULT_HEADER_TEMPLATE = "purple"
-
-
-def _s(v) -> str:
-    """把任意值安全转成字符串。"""
-    if v is None:
-        return ""
-    if isinstance(v, str):
-        return v
-    try:
-        return str(v)
-    except Exception:
-        return ""
-
-
-def _safe_url(url: str) -> str:
-    """校验 URL scheme，只允许 http/https。"""
-    url = _s(url).strip()
-    if url.startswith(("http://", "https://")):
-        return url
-    return "#"
-
-
-def _escape_md(text: str) -> str:
-    """转义 markdown 特殊字符。"""
-    return _s(text).replace("[", "\\[").replace("]", "\\]").replace("(", "\\(").replace(")", "\\)")
-
-
-def _truncate(text: str, limit: int) -> str:
-    """超长截断并加省略号。"""
-    if not text or len(text) <= limit:
-        return text or ""
-    return text[: limit - 1] + "…"
 
 
 def parse_daily_to_card(daily: Mapping[str, Any]) -> Optional[Dict[str, Any]]:
