@@ -4,10 +4,10 @@
 
 ## 它做什么
 
-- 每天上午 8:00-14:30，每 30 分钟检查一次三个源是否有新内容
+- 每天上午 8:00-14:30，每 30 分钟检查一次 AI HOT 和橘鸦两个源
 - juya 有新日报 → 解析 RSS 里的 HTML 概览，渲染成飞书卡片推送
 - aihot 有新日报 → 解析 JSON API，渲染成飞书卡片推送
-- builders 有新推文 → 拉取 AI 大佬动态，Google 翻译成中文，中英双语推送
+- 15:00 GitHub Actions 兜底 → 拉取 builders AI 大佬动态，Google 翻译成中文，中英双语推送
 - 三个源独立去重，当天推过就不再重复
 - 解析失败自动降级，11:00 后仍失败则发带链接的文本兜底
 - 连续 3 次失败或 3 天没更新 → 自动告警到运维群
@@ -111,17 +111,20 @@
 ## 项目结构
 
 ```
-push.py          # 主入口：先推 aihot，再推 juya，最后推 builders
+push.py          # 主入口：按 PUSH_MODE 分流推送
 rss.py           # juya RSS 抓取 + 当天条目提取
 aihot.py         # aihot JSON API 拉取
 builders.py      # follow-builders feed 拉取 + Google 翻译
-lark.py          # 飞书 webhook 签名 + POST
+lark.py          # 飞书 webhook 签名 + POST + 限流重试
 lark_card.py     # juya 卡片渲染（HTML → 飞书卡片）
 aihot_card.py    # aihot 卡片渲染（JSON → 飞书卡片）
 builders_card.py # builders 卡片渲染（中英双语）
 state.py         # 推送状态管理（去重、失败计数、停更告警）
 state.json       # 运行状态（workflow 自动 commit）
-tests/           # 90 个测试
+tests/           # pytest 测试套件
+assets/          # 卡片截图
+requirements.txt # 依赖
+pytest.ini       # 测试配置
 .github/workflows/daily-ai-news.yml  # GitHub Actions 调度
 ```
 
@@ -130,12 +133,12 @@ tests/           # 90 个测试
 ```mermaid
 flowchart TB
     subgraph 调度["🕐 调度层"]
-        C1["cron-job.org<br/>08:00-14:30 每30分钟"]
-        C2["GitHub Actions<br/>15:00 兜底"]
+        C1["cron-job.org<br/>08:00-14:30 每30分钟<br/>mode=morning"]
+        C2["GitHub Actions<br/>15:00 兜底<br/>mode=builders"]
     end
 
     subgraph 推送["⚙️ 推送层"]
-        P["push.py<br/>主入口"]
+        P["push.py<br/>按 PUSH_MODE 分流"]
         A["aihot.py → aihot_card.py<br/>JSON → 卡片"]
         J["rss.py → lark_card.py<br/>XML → 卡片"]
         B["builders.py → builders_card.py<br/>Feed → 中英双语卡片"]
@@ -152,11 +155,11 @@ flowchart TB
         F["飞书群<br/>卡片消息"]
     end
 
-    C1 -->|"POST 触发"| P
-    C2 -->|"定时触发"| P
-    P --> A
-    P --> J
-    P --> B
+    C1 -->|"morning"| P
+    C2 -->|"builders"| P
+    P -->|"morning"| A
+    P -->|"morning"| J
+    P -->|"builders"| B
     A --> A1
     J --> J1
     B --> B1
@@ -219,7 +222,7 @@ flowchart LR
 
 ```bash
 pip install -r requirements.txt
-pytest -v                    # 90 个测试，应全绿
+pytest -v                    # 全部测试应通过
 
 # 本地跑一次推送：
 export LARK_WEBHOOK_URL="你的URL"
@@ -254,4 +257,4 @@ MIT (c) 2026 Ai路人 — 详见 [LICENSE](LICENSE)
 
 ---
 
-Made by [Ai路人](https://github.com/ainews-to-feishu)
+Made by [Ai路人](https://github.com/Ai-luren)
