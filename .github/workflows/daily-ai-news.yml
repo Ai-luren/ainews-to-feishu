@@ -5,10 +5,6 @@ name: daily-ai-news-push
 # 已原生使用 node24 runtime，无需额外配置。
 
 on:
-  schedule:
-    # 北京时间 15:00（UTC 07:00）仅推 follow-builders。
-    # 橘鸦和 AI HOT 由 cron-job.org 在上午触发 workflow_dispatch。
-    - cron: '0 7 * * *'
   workflow_dispatch:
     inputs:
       target_date:
@@ -73,7 +69,7 @@ jobs:
           LARK_OPS_WEBHOOK_URL: ${{ secrets.LARK_OPS_WEBHOOK_URL }}
           LARK_OPS_WEBHOOK_SECRET: ${{ secrets.LARK_OPS_WEBHOOK_SECRET }}
           PUSH_TARGET_DATE: ${{ github.event.inputs.target_date }}
-          PUSH_MODE: ${{ github.event_name == 'schedule' && 'builders' || github.event.inputs.push_mode || 'morning' }}
+          PUSH_MODE: ${{ github.event.inputs.push_mode || 'morning' }}
 
       - name: commit state.json if changed
         if: always()
