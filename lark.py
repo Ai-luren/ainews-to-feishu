@@ -57,8 +57,17 @@ def _post_json(webhook: str, payload: Mapping[str, Any], timeout: int) -> Mappin
         raise ValueError(f"invalid webhook (scheme not http/https, got: {webhook[:30]!r}...)")
 
     for attempt in range(_RATE_LIMIT_RETRIES + 1):
-        with _session() as s:
-            resp = s.post(webhook, json=payload, timeout=timeout)
+        try:
+            with _session() as s:
+                resp = s.post(webhook, json=payload, timeout=timeout)
+        except UnicodeEncodeError as e:
+            # 偶发：requests/urllib3 在处理响应 header 时遇到非 ASCII 字符
+            # 重试一次通常能成功
+            if attempt < _RATE_LIMIT_RETRIES:
+                print(f"[lark] UnicodeEncodeError, 重试 ({attempt+1}/{_RATE_LIMIT_RETRIES}): {e}", flush=True)
+                time.sleep(2)
+                continue
+            raise RuntimeError(f"lark 请求编码错误（重试已用完）: {e}") from e
         if resp.status_code != 200:
             raise RuntimeError(f"lark http {resp.status_code}: {resp.text[:200]}")
         try:
