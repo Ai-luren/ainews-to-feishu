@@ -236,8 +236,14 @@ def _push_aihot(webhook: str, secret: str, ops_webhook: str, ops_secret: str,
                                ops_webhook, ops_secret, today)
         return True
 
-    # 记录日期
+    # 检查内容日期是否等于今天
+    # 防止 fallback 拉到昨天的内容当新内容推送
     entry_date = daily_date(daily)
+    if not backfill and entry_date and entry_date != today:
+        _log(f"[aihot] [skip] content date {entry_date} != today {today}（还未更新）")
+        return True
+
+    # 记录日期
     if entry_date and not backfill:
         record_aihot_entry_date(STATE_PATH, entry_date)
 
