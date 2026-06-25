@@ -7,9 +7,12 @@ import logging
 from datetime import date, datetime
 from typing import List, Optional
 
+import pytz
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
+
+BEIJING = pytz.timezone("Asia/Shanghai")
 
 FEED_URL = (
     "https://raw.githubusercontent.com/zarazhangrui/follow-builders/main/feed-x.json"
@@ -79,14 +82,14 @@ def has_content(feed_data: dict) -> bool:
 
 
 def _parse_date(generated_at: str) -> Optional[date]:
-    """解析 feed 的 generatedAt 时间戳。"""
+    """解析 feed 的 generatedAt 时间戳，返回北京日期。"""
     if not generated_at:
         return None
     try:
         # 格式: 2026-06-22T08:29:37.749Z
-        return datetime.fromisoformat(
-            generated_at.replace("Z", "+00:00")
-        ).date()
+        dt = datetime.fromisoformat(generated_at.replace("Z", "+00:00"))
+        # 转成北京时间再取日期，防止凌晨更新时 UTC 日期比北京日期少一天
+        return dt.astimezone(BEIJING).date()
     except (ValueError, TypeError):
         return None
 
