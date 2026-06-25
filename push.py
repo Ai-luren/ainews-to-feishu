@@ -299,8 +299,14 @@ def _push_builders(webhook: str, secret: str, ops_webhook: str, ops_secret: str,
                                ops_webhook, ops_secret, today)
         return True
 
-    # 记录日期
+    # 检查 feed 日期是否等于今天（follow-builders 通常 14:17 更新）
+    # 防止早上触发时把昨天的 feed 当新内容推送
     entry_date = daily.get("date")
+    if not backfill and entry_date and entry_date != today:
+        _log(f"[builders] [skip] feed date {entry_date} != today {today}（还未更新）")
+        return True
+
+    # 记录日期
     if entry_date and not backfill:
         record_builders_entry_date(STATE_PATH, entry_date)
 
