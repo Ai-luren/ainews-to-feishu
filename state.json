@@ -1,9 +1,9 @@
 {
-  "last_pushed_date": "2026-06-24",
+  "last_pushed_date": "2026-06-25",
   "consecutive_failures": 0,
-  "last_juya_entry_date": "2026-06-24",
+  "last_juya_entry_date": "2026-06-25",
   "juya_dead_alerted_on": null,
-  "juya_pushed_date": null,
+  "juya_pushed_date": "2026-06-25",
   "juya_failures": 0,
   "juya_degraded_alerted_on": null,
   "aihot_pushed_date": "2026-06-25",
