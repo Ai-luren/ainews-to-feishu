@@ -343,6 +343,18 @@ def main() -> int:
     today = _today()
     backfill = _is_backfill()
     mode = _push_mode()
+
+    # all 模式下按时间自动分流：
+    #   上午（< 14:00）→ 只推 aihot + juya（builders feed 通常 14:17 才更新）
+    #   下午（>= 14:00）→ 只推 builders（aihot/juya 上午已推过，去重会 skip）
+    # backfill 模式不受时间限制，手动指定什么就推什么
+    if mode == "all" and not backfill:
+        now_bj = datetime.now(BEIJING)
+        if now_bj.hour < 14:
+            mode = "morning"
+        else:
+            mode = "builders"
+
     _log(f"[meta] today={today} backfill={backfill} mode={mode}")
 
     aihot_ok = True
