@@ -16,6 +16,8 @@ def mock_env(monkeypatch):
     monkeypatch.setenv("LARK_WEBHOOK_SECRET", "test-secret")
     monkeypatch.setenv("LARK_OPS_WEBHOOK_URL", "https://example.com/ops")
     monkeypatch.setenv("LARK_OPS_WEBHOOK_SECRET", "ops-secret")
+    # 模拟上午推送模式（all 模式在上午会自动分流到 morning）
+    monkeypatch.setenv("PUSH_MODE", "morning")
     # 短路 builders，避免真实网络请求
     monkeypatch.setattr(push, "_push_builders", lambda *a, **kw: True)
 
