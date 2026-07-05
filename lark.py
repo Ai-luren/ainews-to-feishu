@@ -75,7 +75,7 @@ def _post_json(webhook: str, payload: Mapping[str, Any], timeout: int) -> Mappin
         except json.JSONDecodeError as e:
             raise RuntimeError(f"lark 响应不是 JSON（http 200 但 body={resp.text[:200]!r}）") from e
 
-        if not isinstance(data, dict) or data.get("code", 0) != 0:
+        if not isinstance(data, dict) or data.get("code", -1) != 0:
             # 频率限制：等待后重试
             if data.get("code") == _RATE_LIMIT_CODE and attempt < _RATE_LIMIT_RETRIES:
                 print(f"[lark] 频率限制，{_RATE_LIMIT_WAIT}s 后重试 ({attempt+1}/{_RATE_LIMIT_RETRIES})", flush=True)

@@ -9,5 +9,5 @@ venv/
 # 敏感信息备份（仅供本地查看，不提交）
 SENSITIVE_BACKUP*.md
 
-# state.json 由 workflow 自动管理，本地修改不提交
-state.json
+# state.json 已 tracked，由 workflow 自动管理
+# 不忽略，确保 workflow 的 git add 能正常工作

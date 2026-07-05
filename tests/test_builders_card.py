@@ -127,7 +127,9 @@ def test_render_card_javascript_url_blocked():
     card = render_card(_make_daily(tweets=[tweet]))
     tweet_div = card["elements"][1]["text"]["content"]
     assert "javascript:" not in tweet_div
-    assert "#" in tweet_div
+    # 严格断言：原始恶意 payload 必须完全消失，而不是只判断 "#" 出现
+    # （"#" 在卡片里本就会出现，弱断言会漏掉 payload 残留）
+    assert "javascript:alert(1)" not in tweet_div
 
 
 def test_render_card_markdown_injection_escaped():

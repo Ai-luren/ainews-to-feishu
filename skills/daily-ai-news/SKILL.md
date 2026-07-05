@@ -84,19 +84,19 @@ gh run watch -R <用户名>/ainews-to-feishu
 
 飞书群 10 秒内收到卡片 = 成功。日志出现 `[skip] juya not updated yet` = 源头今天还没发，正常。
 
-### 第 5 步：设置 cron-job.org（让推送在发布后 15 分钟内到达）
+### 第 5 步：设置 cron-job.org（让推送在发布后 30 分钟内到达）
 
-> GitHub Actions 自带 cron 有约 1 小时排队延迟，不适合"早报"。cron-job.org 补这个缺口。
+> workflow 仅 `workflow_dispatch` 触发，本身不带定时；定时由 cron-job.org 外部触发 `workflow_dispatch`，传 `PUSH_MODE=all`，由 `push.py` 按时间 auto-routing 到 morning 或 builders。
 
 1. 建 GitHub PAT：https://github.com/settings/tokens → 名字 `cron-job-daily-news`，只勾 `workflow` 权限，有效期 1 年
 2. 注册 cron-job.org（免费，不需要信用卡）
 3. 新建 cronjob，**COMMON 标签**：
    - URL: `https://api.github.com/repos/<用户名>/ainews-to-feishu/actions/workflows/daily-ai-news.yml/dispatches`
-   - Crontab: `*/15 8-12 * * *`，时区 `Asia/Shanghai`
+   - Crontab: `*/30 8-15 * * *`（08:00-15:30 北京时间，每 30 分钟一次），时区 `Asia/Shanghai`
 4. **ADVANCED 标签**：
    - Method: `POST`
    - Headers: `Authorization: Bearer <PAT>` / `Accept: application/vnd.github+json` / `X-GitHub-Api-Version: 2022-11-28` / `Content-Type: application/json`
-   - Body: `{"ref":"master"}`
+   - Body: `{"ref":"master","inputs":{"target_date":"","push_mode":"all"}}`
 5. TEST RUN → 返回 204 → CREATE
 
 ---

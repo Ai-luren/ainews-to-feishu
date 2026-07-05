@@ -4,17 +4,18 @@
 
 ## 它做什么
 
-- 每天上午 8:00-14:30，每 30 分钟检查一次 AI HOT 和橘鸦两个源
+- 每天 08:00-15:30，每 30 分钟由 cron-job.org 触发一次 `workflow_dispatch`（`PUSH_MODE=all`）
+- 上午（< 14:00）auto-routing 到 morning：检查 AI HOT 和橘鸦两个源
+- 下午（>= 14:00）auto-routing 到 builders：拉取 builders AI 大佬动态，Google 翻译成中文，中英双语推送
 - juya 有新日报 → 解析 RSS 里的 HTML 概览，渲染成飞书卡片推送
 - aihot 有新日报 → 解析 JSON API，渲染成飞书卡片推送
-- 15:00 GitHub Actions 兜底 → 拉取 builders AI 大佬动态，Google 翻译成中文，中英双语推送
 - 三个源独立去重，当天推过就不再重复
-- 解析失败自动降级，11:00 后仍失败则发带链接的文本兜底
+- juya 解析失败自动降级，11:00 后仍解析降级则发带链接的文本兜底（仅对 juya 生效）
 - 连续 3 次失败或 3 天没更新 → 自动告警到运维群
 
 ## 效果
 
-飞书群每天收到 3 条卡片消息：
+飞书群每天最多收到 3 条卡片消息：上午 auto-routing 推 aihot + juya，下午 14:00 后 auto-routing 推 builders。
 
 ### 橘鸦 AI 早报
 
@@ -78,9 +79,9 @@
   - `Authorization: Bearer <刚才复制的 GitHub PAT>`
   - `Accept: application/vnd.github.v3+json`
   - `Content-Type: application/json`
-- **Body**: `{"ref":"master","inputs":{"target_date":""}}`
+- **Body**: `{"ref":"master","inputs":{"target_date":"","push_mode":"all"}}`
 - **Execution time / Timezone**: `Asia/Shanghai`
-- **Schedule**: Crontab 填 `*/30 8-14 * * *`
+- **Schedule**: Crontab 填 `*/30 8-15 * * *`（08:00-15:30 北京时间，每 30 分钟一次）
 - 点 "TEST RUN" → 返回 204 就是成功
 - 点 "CREATE"
 
@@ -92,9 +93,9 @@
 - 如果收到卡片 → 部署成功
 
 **第 7 步：确认明天能自动推送**
-- 告诉用户：明天上午 8:00 开始，每 30 分钟会自动检查
-- 如果 juya 发布了新日报，会在 30 分钟内推送到飞书群
-- follow-builders 的源数据通常在 14:00 后更新，15:00 GitHub Actions 兜底时会推送
+- 告诉用户：明天上午 8:00 开始，每 30 分钟 cron-job.org 会自动触发 workflow_dispatch（`PUSH_MODE=all`）
+- 上午（< 14:00）auto-routing 到 morning：如果 juya 发布了新日报，会在 30 分钟内推送到飞书群
+- 下午（>= 14:00）auto-routing 到 builders：follow-builders 的源数据通常在 14:00 后更新，触发后会推送大佬动态
 
 ### 常见问题（部署时）
 
@@ -133,11 +134,11 @@ pytest.ini       # 测试配置
 ```mermaid
 flowchart TB
     subgraph 调度["🕐 调度层"]
-        C1["cron-job.org<br/>08:00-14:30 每30分钟<br/>mode=morning"]
-        C2["GitHub Actions<br/>15:00 兜底<br/>mode=builders"]
+        C1["cron-job.org<br/>08:00-15:30 每30分钟<br/>PUSH_MODE=all"]
     end
 
     subgraph 推送["⚙️ 推送层"]
+        R["auto-routing<br/>&lt;14:00 → morning<br/&gt;=14:00 → builders"]
         P["push.py<br/>按 PUSH_MODE 分流"]
         A["aihot.py → aihot_card.py<br/>JSON → 卡片"]
         J["rss.py → lark_card.py<br/>XML → 卡片"]
@@ -155,8 +156,9 @@ flowchart TB
         F["飞书群<br/>卡片消息"]
     end
 
-    C1 -->|"morning"| P
-    C2 -->|"builders"| P
+    C1 -->|"workflow_dispatch<br/>push_mode=all"| R
+    R -->|"<14:00 morning"| P
+    R -->|">=14:00 builders"| P
     P -->|"morning"| A
     P -->|"morning"| J
     P -->|"builders"| B
@@ -169,7 +171,7 @@ flowchart TB
     B -->|"双语卡片"| F
 
     style C1 fill:#e1f5fe,stroke:#0288d1
-    style C2 fill:#e3f2fd,stroke:#1976d2
+    style R fill:#e3f2fd,stroke:#1976d2
     style P fill:#fff3e0,stroke:#f57c00
     style A fill:#e8f5e9,stroke:#388e3c
     style J fill:#e8f5e9,stroke:#388e3c
@@ -216,7 +218,7 @@ flowchart LR
 | 09:00-10:30 | 降级 → 告警（只发1次）→ 不标记 → 等重试 |
 | 11:00 | 降级 → **发文本到主群**（带链接）→ 标记已推送 |
 | 11:30 | skip（已推送） |
-| 15:00 | GitHub Actions 兜底 → skip |
+| 14:30-15:30 | cron 触发 → auto-routing 到 builders（juya 已推送，skip） |
 
 ## 本地开发
 
@@ -248,7 +250,8 @@ python push.py
 | `aihot.virxact.com` | aihot 日报 JSON API |
 | `follow-builders` (GitHub) | AI 大佬推文 feed |
 | `translate.googleapis.com` | Google 免费翻译（英文→中文） |
-| GitHub Actions | 调度 + 执行 |
+| GitHub Actions | workflow 执行环境（仅 workflow_dispatch 触发，无 schedule） |
+| cron-job.org | 定时触发 workflow_dispatch |
 | 飞书开放平台 | 推送通道 |
 
 ## License

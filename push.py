@@ -115,15 +115,22 @@ def _alert(ops_webhook: str, ops_secret: str, text: str) -> None:
         _log(f"[warn] ops alert failed: {e}", err=True)
 
 
+def _record_juya_entry(entry: dict, backfill: bool) -> None:
+    """推送成功后记录 juya entry 日期（仅在非 backfill 模式下记录）。"""
+    pub_dt = entry.get("published_dt")
+    if isinstance(pub_dt, datetime) and not backfill:
+        record_juya_entry_date(STATE_PATH, pub_dt.astimezone(BEIJING).date())
+
+
 def _push_juya(webhook: str, secret: str, ops_webhook: str, ops_secret: str,
                today: date, backfill: bool) -> bool:
     """推送 juya，返回 True=正常结束，False=失败"""
-    # 去重
-    if not backfill and is_pushed_today(STATE_PATH, today):
-        _log(f"[juya] [skip] already pushed today ({today})")
-        return True
-    if backfill and today == datetime.now(BEIJING).date() and is_pushed_today(STATE_PATH, today):
-        _log("[juya] [skip] backfill 今天已推送")
+    # 去重（backfill 也走去重，防止重复 backfill 同一天）
+    if is_pushed_today(STATE_PATH, today):
+        if backfill:
+            _log(f"[juya] [skip] backfill already pushed ({today})")
+        else:
+            _log(f"[juya] [skip] already pushed today ({today})")
         return True
 
     # 拉取
@@ -146,11 +153,6 @@ def _push_juya(webhook: str, secret: str, ops_webhook: str, ops_secret: str,
                                ops_webhook, ops_secret, today)
         return True
 
-    # 记录日期
-    pub_dt = entry.get("published_dt")
-    if isinstance(pub_dt, datetime) and not backfill:
-        record_juya_entry_date(STATE_PATH, pub_dt.astimezone(BEIJING).date())
-
     # 渲染推送
     try:
         card = parse_entry_to_card(entry)
@@ -161,6 +163,8 @@ def _push_juya(webhook: str, secret: str, ops_webhook: str, ops_secret: str,
                 title = entry.get("title") or "<untitled>"
                 link = entry.get("link") or "#"
                 send_lark_text(webhook, secret, f"🤖 橘鸦 AI 早报 · {title}\n（解析降级）\n{link}")
+                mark_pushed_today(STATE_PATH, today)
+                _record_juya_entry(entry, backfill)
                 _log(f"[juya] [ok] pushed (degraded/backfill) {today}")
                 return True
 
@@ -172,6 +176,7 @@ def _push_juya(webhook: str, secret: str, ops_webhook: str, ops_secret: str,
                 send_lark_text(webhook, secret,
                                f"🤖 橘鸦 AI 早报 · {title}\n（卡片解析失败，点击查看完整日报）\n{link}")
                 mark_pushed_today(STATE_PATH, today)
+                _record_juya_entry(entry, backfill)
                 _log(f"[juya] [ok] pushed (final-fallback) {today}")
                 return True
 
@@ -185,8 +190,8 @@ def _push_juya(webhook: str, secret: str, ops_webhook: str, ops_secret: str,
             return False
 
         send_lark_card(webhook, secret, card)
-        if not backfill:
-            mark_pushed_today(STATE_PATH, today)
+        mark_pushed_today(STATE_PATH, today)
+        _record_juya_entry(entry, backfill)
         _log(f"[juya] [ok] pushed {today}")
         return True
 
@@ -201,12 +206,12 @@ def _push_juya(webhook: str, secret: str, ops_webhook: str, ops_secret: str,
 def _push_aihot(webhook: str, secret: str, ops_webhook: str, ops_secret: str,
                 today: date, backfill: bool) -> bool:
     """推送 aihot，返回 True=正常结束，False=失败"""
-    # 去重
-    if not backfill and is_aihot_pushed_today(STATE_PATH, today):
-        _log(f"[aihot] [skip] already pushed today ({today})")
-        return True
-    if backfill and today == datetime.now(BEIJING).date() and is_aihot_pushed_today(STATE_PATH, today):
-        _log("[aihot] [skip] backfill 今天已推送")
+    # 去重（backfill 也走去重，防止重复 backfill 同一天）
+    if is_aihot_pushed_today(STATE_PATH, today):
+        if backfill:
+            _log(f"[aihot] [skip] backfill already pushed ({today})")
+        else:
+            _log(f"[aihot] [skip] already pushed today ({today})")
         return True
 
     # 拉取
@@ -243,25 +248,23 @@ def _push_aihot(webhook: str, secret: str, ops_webhook: str, ops_secret: str,
         _log(f"[aihot] [skip] content date {entry_date} != today {today}（还未更新）")
         return True
 
-    # 记录日期
-    if entry_date and not backfill:
-        record_aihot_entry_date(STATE_PATH, entry_date)
-
     # 渲染推送
     try:
         card = parse_daily_to_card(daily)
         if card is None:
             d = daily_date(daily) or today
             send_lark_text(webhook, secret, f"🔥 AI HOT 日报 · {d}\n（解析降级）\n{AIHOT_BASE_URL}/")
-            if not backfill:
-                mark_aihot_pushed_today(STATE_PATH, today)
+            mark_aihot_pushed_today(STATE_PATH, today)
+            if entry_date and not backfill:
+                record_aihot_entry_date(STATE_PATH, entry_date)
             _alert(ops_webhook, ops_secret, "⚠️ aihot 内容解析降级")
             _log(f"[aihot] [ok] pushed (degraded) {today}")
             return True
 
         send_lark_card(webhook, secret, card)
-        if not backfill:
-            mark_aihot_pushed_today(STATE_PATH, today)
+        mark_aihot_pushed_today(STATE_PATH, today)
+        if entry_date and not backfill:
+            record_aihot_entry_date(STATE_PATH, entry_date)
         _log(f"[aihot] [ok] pushed {today} ({total_items(daily)} 条)")
         return True
 
@@ -276,14 +279,13 @@ def _push_aihot(webhook: str, secret: str, ops_webhook: str, ops_secret: str,
 def _push_builders(webhook: str, secret: str, ops_webhook: str, ops_secret: str,
                    today: date, backfill: bool) -> bool:
     """推送 follow-builders 推文动态，返回 True=正常结束，False=失败"""
-    # 去重
+    # 去重（backfill 也走去重，防止重复 backfill 同一天）
     if is_builders_pushed_today(STATE_PATH, today):
-        if backfill and today == datetime.now(BEIJING).date():
-            _log("[builders] [skip] backfill 今天已推送")
-            return True
-        if not backfill:
+        if backfill:
+            _log(f"[builders] [skip] backfill already pushed ({today})")
+        else:
             _log(f"[builders] [skip] already pushed today ({today})")
-            return True
+        return True
 
     # 拉取 + 翻译
     try:
@@ -312,16 +314,13 @@ def _push_builders(webhook: str, secret: str, ops_webhook: str, ops_secret: str,
         _log(f"[builders] [skip] feed date {entry_date} != today {today}（还未更新）")
         return True
 
-    # 记录日期
-    if entry_date and not backfill:
-        record_builders_entry_date(STATE_PATH, entry_date)
-
     # 渲染推送
     try:
         card = builders_render_card(daily)
         send_lark_card(webhook, secret, card)
-        if not backfill:
-            mark_builders_pushed_today(STATE_PATH, today)
+        mark_builders_pushed_today(STATE_PATH, today)
+        if entry_date and not backfill:
+            record_builders_entry_date(STATE_PATH, entry_date)
         _log(f"[builders] [ok] pushed {today} ({len(daily.get('tweets', []))} 条推文)")
         return True
 

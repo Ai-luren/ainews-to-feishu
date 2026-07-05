@@ -59,10 +59,16 @@ def test_parse_daily_header_date():
 
 
 def test_parse_daily_header_template():
-    """测试 header 颜色模板。"""
+    """测试 header 颜色模板。
+
+    _make_daily() 的首个 section label 是 "大模型"，而 aihot_card 的
+    _AIHOT_HEADER_TEMPLATE 里没有 "大模型" 这一键（只有"模型发布/更新"等），
+    因此走 _DEFAULT_HEADER_TEMPLATE = "purple" 兜底。这里改成精确值断言，
+    避免宽泛集合断言掩盖映射逻辑回归。
+    """
     card = parse_daily_to_card(_make_daily())
     assert card is not None
-    assert card["header"]["template"] in ("purple", "blue", "indigo", "green", "orange", "red")
+    assert card["header"]["template"] == "purple"
 
 
 # ———————————— Section 渲染 ———————————— #

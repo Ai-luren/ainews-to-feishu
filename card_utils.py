@@ -30,8 +30,20 @@ def _safe_url(url: str) -> str:
 
 
 def _escape_md(text: str) -> str:
-    """转义 markdown 特殊字符，防止链接劫持。"""
-    return _s(text).replace("[", "\\[").replace("]", "\\]").replace("(", "\\(").replace(")", "\\)")
+    """转义飞书 lark_md 特殊字符，防止排版劫持。
+
+    转义字符：[]()*`>~-
+    - []() 防止链接劫持
+    - * 防止粗体 **text**
+    - ` 防止代码块
+    - > 防止引用块
+    - ~ 防止删除线 ~~text~~
+    - _ 防止斜体 _text_
+    """
+    s = _s(text)
+    for ch in ("[", "]", "(", ")", "*", "`", ">", "~", "_"):
+        s = s.replace(ch, "\\" + ch)
+    return s
 
 
 def _truncate(text: str, limit: int) -> str:

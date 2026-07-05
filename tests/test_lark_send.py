@@ -93,11 +93,15 @@ def test_send_lark_text_non_json_body_raises():
 # ---------------------------------------------------------------------------
 
 @responses.activate
-def test_post_json_missing_code_field_treated_as_ok():
-    """响应体是 dict 但缺少 code 字段 → code 默认 0，视为成功。"""
+def test_post_json_missing_code_field_treated_as_failure():
+    """响应体是 dict 但缺少 code 字段 → 视为失败（防畸形响应静默通过）。
+
+    飞书 webhook 成功响应固定为 {"code": 0, "msg": "ok"}。
+    缺少 code 字段说明响应非标准（网关错误页/代理劫持等），应报错。
+    """
     responses.add(responses.POST, WEBHOOK, status=200, json={"msg": "ok"})
-    # 不抛异常即可
-    _post_json(WEBHOOK, {"msg_type": "text"}, 5)
+    with pytest.raises(RuntimeError):
+        _post_json(WEBHOOK, {"msg_type": "text"}, 5)
 
 
 # ---------------------------------------------------------------------------

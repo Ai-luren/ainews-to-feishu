@@ -26,12 +26,33 @@ state.json 结构（由 load_state 自动 setdefault，无需手动初始化）�
   "consecutive_failures": 0,
 }
 """
+import fcntl
 import json
 import os
 import tempfile
+from contextlib import contextmanager
 from datetime import date
 from pathlib import Path
 from typing import Any, Dict, Optional
+
+
+@contextmanager
+def _state_lock(path: Path):
+    """排他文件锁，防止多个进程并发 read-modify-write state.json 丢失更新。
+
+    cron-job.org 每 30 分钟触发一次，若某次执行 >30 分钟（翻译慢），
+    下一次 cron 可能并发启动。不加锁会导致：
+    - 失败计数丢失（两进程都读到 failures=1，都写 2，应为 3）
+    - pushed_date 被覆盖，导致重复推送
+    """
+    lock_path = Path(path).parent / f".{Path(path).name}.lock"
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(lock_path, "w") as f:
+        fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(f.fileno(), fcntl.LOCK_UN)
 
 
 def load_state(path: Path) -> Dict[str, Any]:
@@ -133,38 +154,42 @@ def _bump_failure_read(path: Path, key: str) -> int:
 
 
 def _mark_pushed(path: Path, pushed_key: str, failures_key: str, today: date) -> None:
-    data = load_state(path)
-    data[pushed_key] = today.isoformat()
-    data[failures_key] = 0
-    if pushed_key == "juya_pushed_date":
-        data["last_pushed_date"] = today.isoformat()
-        data["consecutive_failures"] = 0
-    save_state(path, data)
+    with _state_lock(path):
+        data = load_state(path)
+        data[pushed_key] = today.isoformat()
+        data[failures_key] = 0
+        if pushed_key == "juya_pushed_date":
+            data["last_pushed_date"] = today.isoformat()
+            data["consecutive_failures"] = 0
+        save_state(path, data)
 
 
 def _bump_failure(path: Path, key: str) -> int:
-    n = _bump_failure_read(path, key) + 1
-    data = load_state(path)
-    data[key] = n
-    if key == "juya_failures":
-        data["consecutive_failures"] = n
-    save_state(path, data)
+    with _state_lock(path):
+        n = _bump_failure_read(path, key) + 1
+        data = load_state(path)
+        data[key] = n
+        if key == "juya_failures":
+            data["consecutive_failures"] = n
+        save_state(path, data)
     return n
 
 
 def _reset_failure(path: Path, key: str) -> None:
-    data = load_state(path)
-    data[key] = 0
-    if key == "juya_failures":
-        data["consecutive_failures"] = 0
-    save_state(path, data)
+    with _state_lock(path):
+        data = load_state(path)
+        data[key] = 0
+        if key == "juya_failures":
+            data["consecutive_failures"] = 0
+        save_state(path, data)
 
 
 def _record_entry_date(path: Path, entry_date_key: str, dead_key: str, entry_date: date) -> None:
-    data = load_state(path)
-    data[entry_date_key] = entry_date.isoformat()
-    data[dead_key] = None  # 源头恢复 → 清除"已告警过"标记
-    save_state(path, data)
+    with _state_lock(path):
+        data = load_state(path)
+        data[entry_date_key] = entry_date.isoformat()
+        data[dead_key] = None  # 源头恢复 → 清除"已告警过"标记
+        save_state(path, data)
 
 
 def _get_last_entry_date(path: Path, key: str) -> Optional[date]:
@@ -184,9 +209,10 @@ def _should_alert_dead(path: Path, alerted_key: str, today: date) -> bool:
 
 
 def _mark_dead_alerted(path: Path, alerted_key: str, today: date) -> None:
-    data = load_state(path)
-    data[alerted_key] = today.isoformat()
-    save_state(path, data)
+    with _state_lock(path):
+        data = load_state(path)
+        data[alerted_key] = today.isoformat()
+        save_state(path, data)
 
 
 # ———————————— _Source 类：封装字段名差异 —————————— #
@@ -287,6 +313,7 @@ def should_alert_juya_degraded(path: Path, today: date) -> bool:
 
 
 def mark_juya_degraded_alerted(path: Path, today: date) -> None:
-    data = load_state(path)
-    data["juya_degraded_alerted_on"] = today.isoformat()
-    save_state(path, data)
+    with _state_lock(path):
+        data = load_state(path)
+        data["juya_degraded_alerted_on"] = today.isoformat()
+        save_state(path, data)

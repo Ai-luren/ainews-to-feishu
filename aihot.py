@@ -25,12 +25,21 @@ def _session() -> requests.Session:
 
 
 def fetch_daily(target_date: Optional[date] = None) -> Optional[Dict[str, Any]]:
-    """拉取 aihot 日报。target_date=None 时拉最新一期。"""
+    """拉取 aihot 日报。target_date=None 时拉最新一期。
+
+    404 处理策略：
+    - 有 target_date 的 404 = 该日期无内容，返回 None（正常状态）
+    - 无 target_date 的 404 = API 端点不可用，抛异常（走失败计数）
+    """
     url = f"{_DAILY_URL}/{target_date}" if target_date else _DAILY_URL
     with _session() as s:
         resp = s.get(url, timeout=_TIMEOUT)
         if resp.status_code == 404:
-            return None
+            if target_date is not None:
+                # 指定日期无内容 — 正常状态
+                return None
+            # 最新一期都 404 → API 端点异常
+            raise RuntimeError(f"aihot API 返回 404（端点可能已变更）: {url}")
         resp.raise_for_status()
 
     if len(resp.content) > _MAX_BYTES:
