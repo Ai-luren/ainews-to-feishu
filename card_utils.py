@@ -32,7 +32,7 @@ def _safe_url(url: str) -> str:
 def _escape_md(text: str) -> str:
     """转义飞书 lark_md 特殊字符，防止排版劫持。
 
-    转义字符：[]()*`>~-
+    转义字符：[]()*`>~_
     - []() 防止链接劫持
     - * 防止粗体 **text**
     - ` 防止代码块

@@ -14,7 +14,7 @@ on:
       push_mode:
         description: '推送范围：morning=AI HOT+橘鸦，builders=大佬动态，all=全部'
         required: false
-        default: 'morning'
+        default: 'all'
         type: choice
         options:
           - morning
@@ -69,7 +69,7 @@ jobs:
           LARK_OPS_WEBHOOK_URL: ${{ secrets.LARK_OPS_WEBHOOK_URL }}
           LARK_OPS_WEBHOOK_SECRET: ${{ secrets.LARK_OPS_WEBHOOK_SECRET }}
           PUSH_TARGET_DATE: ${{ github.event.inputs.target_date }}
-          PUSH_MODE: ${{ github.event.inputs.push_mode || 'morning' }}
+          PUSH_MODE: ${{ github.event.inputs.push_mode || 'all' }}
 
       - name: commit state.json if changed
         if: always()

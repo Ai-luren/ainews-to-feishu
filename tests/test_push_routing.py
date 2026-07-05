@@ -2,11 +2,13 @@
 
 push.main() 在 PUSH_MODE=all 且非 backfill 时会按北京时间当前小时分流：
   * hour < 14 → 等效 morning（只推 aihot + juya）
-  * hour >= 14 → 等效 builders（只推 builders）
+  * hour >= 14 → 保持 all，依次推 aihot + juya + builders
+    （去重机制会跳过上午已推的，未推的会补推；
+     避免上午 cron 全部失败时下午只推 builders 导致 aihot/juya 当天丢失）
 
 这里覆盖四条路径：
   * all + 13:59（hour=13）→ 路由到 morning
-  * all + 14:00（hour=14）→ 路由到 builders
+  * all + 14:00（hour=14）→ 保持 all，三个源都调用
   * morning 模式不受时间影响（即使 hour=14 仍推 aihot+juya）
   * builders 模式不受时间影响（即使 hour=13 仍只推 builders）
 
@@ -86,8 +88,13 @@ def test_all_mode_before_14_routes_to_morning(state_path, monkeypatch):
     assert calls == ["aihot", "juya"]
 
 
-def test_all_mode_at_14_routes_to_builders(state_path, monkeypatch):
-    """all 模式 + 14:00 → 路由到 builders：只调用 builders。"""
+def test_all_mode_at_14_runs_all_three_sources(state_path, monkeypatch):
+    """all 模式 + 14:00 → 保持 all：依次调用 aihot + juya + builders。
+
+    下午不再硬切到 builders，而是三个源都跑一遍：
+    上午已推过的会被去重 skip，未推的会补推，
+    避免上午 cron 全部失败时下午只推 builders 导致 aihot/juya 当天丢失。
+    """
     monkeypatch.setattr(push, "datetime", _fake_datetime(14, 0))
     calls = _record_calls(monkeypatch)
 
@@ -95,7 +102,7 @@ def test_all_mode_at_14_routes_to_builders(state_path, monkeypatch):
         rc = push.main()
 
     assert rc == 0
-    assert calls == ["builders"]
+    assert calls == ["aihot", "juya", "builders"]
 
 
 # ---------------------------------------------------------------------------

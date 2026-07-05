@@ -5,6 +5,7 @@
 """
 import logging
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date, datetime
 from typing import List, Optional
 
@@ -62,8 +63,38 @@ def _translate(text: str) -> str:
 
 
 def _batch_translate(texts: List[str]) -> List[str]:
-    """批量翻译，逐条调用（Google 免费接口不支持批量）。"""
-    return [_translate(t) for t in texts]
+    """批量翻译，用线程池并发以控制总时长。
+
+    Google 免费接口不支持批量，逐条调用但并发执行。
+    10 条推文 + 10 个 bio = 20 次请求，串行最坏 20×15s=300s
+    可能超过 GitHub Actions 超时，因此改用 max_workers=5 并发。
+
+    保护策略（接口签名与返回顺序保持不变）：
+    - 总时长超过 120 秒后，剩余未完成的翻译走原文兜底；
+    - 单条翻译异常或 30 秒超时，走原文兜底；
+    - results 预初始化为原文，成功的覆盖，失败的保持原文。
+    """
+    if not texts:
+        return []
+    # 默认兜底为原文，保证返回长度与输入一致、顺序不乱
+    results = list(texts)
+    start = time.time()
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        future_to_idx = {
+            executor.submit(_translate, t): i
+            for i, t in enumerate(texts)
+        }
+        for future in as_completed(future_to_idx):
+            idx = future_to_idx[future]
+            # 总时长保护：超过 120 秒，剩余走原文（results 已初始化为原文）
+            if time.time() - start > 120:
+                continue
+            try:
+                results[idx] = future.result(timeout=30)
+            except Exception:
+                # 单条超时或异常，保持原文兜底
+                pass
+    return results
 
 
 def fetch_feed() -> dict:
@@ -77,7 +108,11 @@ def fetch_feed() -> dict:
     url = f"{FEED_URL}?t={int(time.time())}"
     resp = s.get(url, timeout=(5, 30))
     resp.raise_for_status()
-    return resp.json()
+    data = resp.json()
+    # 防御：resp.json() 可能返回 list/str 等，后续 data.get() 会抛 AttributeError
+    if not isinstance(data, dict):
+        raise ValueError(f"feed 返回非 dict: {type(data).__name__}")
+    return data
 
 
 def has_content(feed_data: dict) -> bool:

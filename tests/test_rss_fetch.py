@@ -51,6 +51,7 @@ def test_fetch_rss_raises_on_oversized_body():
     body = b"x" * (rss.MAX_RSS_BYTES + 1)
     responses.add(
         responses.GET, "http://example.invalid/rss.xml", status=200, body=body,
+        content_type="application/rss+xml",
     )
     with pytest.raises(RuntimeError, match="过大"):
         fetch_rss(url="http://example.invalid/rss.xml", timeout=1)
@@ -83,9 +84,26 @@ def test_fetch_rss_returns_bytes_on_success():
     """成功路径：返回 bytes（基本契约）。"""
     responses.add(
         responses.GET, "http://example.invalid/rss.xml", status=200, body=b"<rss/>",
+        content_type="application/rss+xml",
     )
     got = fetch_rss(url="http://example.invalid/rss.xml", timeout=1)
     assert got == b"<rss/>"
+
+
+@responses.activate
+def test_fetch_rss_rejects_html_content_type():
+    """HTTP 200 但返回 HTML（运营商劫持错误页）应被拒绝，不静默当"无条目"。
+
+    回归 P1-5：feedparser 解析 HTML 会得到空 entries，
+    原先会被静默当作"今日无条目"跳过推送。
+    """
+    responses.add(
+        responses.GET, "http://example.invalid/rss.xml",
+        status=200, body=b"<html><body>error</body></html>",
+        content_type="text/html; charset=utf-8",
+    )
+    with pytest.raises(RuntimeError, match="非 XML"):
+        fetch_rss(url="http://example.invalid/rss.xml", timeout=1)
 
 
 # ---------------------------------------------------------------------------

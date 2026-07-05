@@ -157,7 +157,7 @@ def test_duplicate_push_skipped(fresh_state: Path, mock_env, monkeypatch):
 def test_cron_job_org_schedule_validation():
     """验证 cron-job.org 的 crontab 配置。"""
     # crontab: */30 8-15 * * *（北京时间 08:00-15:30）
-    # 每半小时触发一次，14:00 后 all 模式自动分流到 builders
+    # 每半小时触发一次，14:00 后 all 模式保持 all（三个源都跑，去重 skip 已推的）
     expected_times = [
         "08:00", "08:30", "09:00", "09:30", "10:00", "10:30",
         "11:00", "11:30", "12:00", "12:30", "13:00", "13:30",

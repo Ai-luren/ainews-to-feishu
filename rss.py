@@ -48,12 +48,20 @@ def _session_with_retries() -> requests.Session:
 
 
 def fetch_rss(url: str = RSS_URL, timeout=_HTTP_TIMEOUT) -> bytes:
-    """拉取 RSS feed 的原始 bytes。超限直接抛错，避免 feedparser 吃内存。"""
+    """拉取 RSS feed 的原始 bytes。超限直接抛错，避免 feedparser 吃内存。
+
+    Content-Type 校验：防止运营商劫持返回 HTML 错误页（HTTP 200），
+    被 feedparser 解析为空 entries 后静默当作"无今日条目"。
+    """
     if not url or not isinstance(url, str):
         raise ValueError(f"invalid rss url: {url!r}")
     with _session_with_retries() as s:
         resp = s.get(url, timeout=timeout)
     resp.raise_for_status()
+    # 校验 Content-Type，拒绝 HTML 错误页等非 XML 内容
+    ct = resp.headers.get("Content-Type", "")
+    if "xml" not in ct and "rss" not in ct and "atom" not in ct:
+        raise RuntimeError(f"RSS 返回非 XML 内容: Content-Type={ct}")
     if len(resp.content) > MAX_RSS_BYTES:
         raise RuntimeError(f"RSS 过大（{len(resp.content)} bytes，上限 {MAX_RSS_BYTES}）")
     return resp.content
@@ -90,10 +98,13 @@ def parse_feed(xml) -> List[dict]:
 
 
 def _title_to_date(title: str) -> Optional[date]:
-    """从标题里提取 YYYY-MM-DD；无法解析时返回 None。"""
+    """从标题里提取 YYYY-MM-DD；无法解析时返回 None。
+
+    锚定标题开头匹配，避免标题中段含其他日期时误匹配。
+    """
     if not title:
         return None
-    m = re.search(r"(\d{4})-(\d{2})-(\d{2})", title)
+    m = re.match(r"\s*(\d{4})-(\d{2})-(\d{2})", title)
     if m:
         try:
             return date(int(m.group(1)), int(m.group(2)), int(m.group(3)))

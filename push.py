@@ -13,6 +13,7 @@ from aihot import AIHOT_BASE_URL, daily_date, fetch_daily, has_content, total_it
 from aihot_card import parse_daily_to_card
 from builders import fetch_daily as builders_fetch_daily
 from builders_card import render_card as builders_render_card
+from card_utils import _safe_url
 from lark import send_lark_card, send_lark_text
 from lark_card import parse_entry_to_card
 from rss import extract_today_entry, fetch_rss
@@ -145,12 +146,15 @@ def _push_juya(webhook: str, secret: str, ops_webhook: str, ops_secret: str,
 
     # 无内容
     if entry is None:
+        if backfill:
+            # backfill 目标日期无内容 = 失败，返回 False 让 main() 退出码非 0
+            _log(f"[juya] [skip] no content for {today} (backfill)")
+            return False
         _log(f"[juya] [skip] not updated for {today}")
-        if not backfill:
-            _handle_dead_alert("juya", "https://daily.juya.uk/",
-                               juya_silent_days, get_last_juya_entry_date,
-                               should_alert_juya_dead, mark_juya_dead_alerted,
-                               ops_webhook, ops_secret, today)
+        _handle_dead_alert("juya", "https://daily.juya.uk/",
+                           juya_silent_days, get_last_juya_entry_date,
+                           should_alert_juya_dead, mark_juya_dead_alerted,
+                           ops_webhook, ops_secret, today)
         return True
 
     # 渲染推送
@@ -161,7 +165,7 @@ def _push_juya(webhook: str, secret: str, ops_webhook: str, ops_secret: str,
             # 补推模式：没有重试机制，直接发降级文本。
             if backfill:
                 title = entry.get("title") or "<untitled>"
-                link = entry.get("link") or "#"
+                link = _safe_url(entry.get("link"))
                 send_lark_text(webhook, secret, f"🤖 橘鸦 AI 早报 · {title}\n（解析降级）\n{link}")
                 mark_pushed_today(STATE_PATH, today)
                 _record_juya_entry(entry, backfill)
@@ -172,7 +176,7 @@ def _push_juya(webhook: str, secret: str, ops_webhook: str, ops_secret: str,
             now_bj = datetime.now(BEIJING)
             if now_bj.hour >= 11:
                 title = entry.get("title") or "<untitled>"
-                link = entry.get("link") or "#"
+                link = _safe_url(entry.get("link"))
                 send_lark_text(webhook, secret,
                                f"🤖 橘鸦 AI 早报 · {title}\n（卡片解析失败，点击查看完整日报）\n{link}")
                 mark_pushed_today(STATE_PATH, today)
@@ -233,18 +237,26 @@ def _push_aihot(webhook: str, secret: str, ops_webhook: str, ops_secret: str,
             daily = None
 
     if not has_content(daily):
+        if backfill:
+            # backfill 目标日期无内容 = 失败，返回 False 让 main() 退出码非 0
+            _log(f"[aihot] [skip] no content for {today} (backfill)")
+            return False
         _log(f"[aihot] [skip] no content for {today}")
-        if not backfill:
-            _handle_dead_alert("aihot", f"{AIHOT_BASE_URL}/",
-                               aihot_silent_days, get_last_aihot_entry_date,
-                               should_alert_aihot_dead, mark_aihot_dead_alerted,
-                               ops_webhook, ops_secret, today)
+        _handle_dead_alert("aihot", f"{AIHOT_BASE_URL}/",
+                           aihot_silent_days, get_last_aihot_entry_date,
+                           should_alert_aihot_dead, mark_aihot_dead_alerted,
+                           ops_webhook, ops_secret, today)
         return True
 
     # 检查内容日期是否等于今天
-    # 防止 fallback 拉到昨天的内容当新内容推送
+    # 防止 fallback 拉到其他日期的内容当新内容推送
+    # backfill 模式下也校验：目标日期无内容时 fallback 拉到其他日期也应跳过
     entry_date = daily_date(daily)
-    if not backfill and entry_date and entry_date != today:
+    if not entry_date:
+        # API 返回畸形数据（有条目但无 date 字段）→ 跳过，避免推到旧内容
+        _log(f"[aihot] [skip] content has no date field, skipping")
+        return True
+    if entry_date != today:
         _log(f"[aihot] [skip] content date {entry_date} != today {today}（还未更新）")
         return True
 
@@ -298,19 +310,26 @@ def _push_builders(webhook: str, secret: str, ops_webhook: str, ops_secret: str,
                                ops_webhook, ops_secret, e, "拉取")
 
     if not daily or not daily.get("tweets"):
+        if backfill:
+            # backfill 目标日期无内容 = 失败，返回 False 让 main() 退出码非 0
+            _log(f"[builders] [skip] no content for {today} (backfill)")
+            return False
         _log(f"[builders] [skip] no content for {today}")
-        if not backfill:
-            _handle_dead_alert("follow-builders",
-                               "https://github.com/zarazhangrui/follow-builders",
-                               builders_silent_days, get_last_builders_entry_date,
-                               should_alert_builders_dead, mark_builders_dead_alerted,
-                               ops_webhook, ops_secret, today)
+        _handle_dead_alert("follow-builders",
+                           "https://github.com/zarazhangrui/follow-builders",
+                           builders_silent_days, get_last_builders_entry_date,
+                           should_alert_builders_dead, mark_builders_dead_alerted,
+                           ops_webhook, ops_secret, today)
         return True
 
     # 检查 feed 日期是否等于今天（follow-builders 通常 14:17 更新）
     # 防止早上触发时把昨天的 feed 当新内容推送
     entry_date = daily.get("date")
-    if not backfill and entry_date and entry_date != today:
+    if not entry_date:
+        # feed 畸形数据（有推文但无 generatedAt）→ 跳过，避免推到旧内容
+        _log(f"[builders] [skip] content has no date field, skipping")
+        return True
+    if entry_date != today:
         _log(f"[builders] [skip] feed date {entry_date} != today {today}（还未更新）")
         return True
 
@@ -344,15 +363,16 @@ def main() -> int:
     mode = _push_mode()
 
     # all 模式下按时间自动分流：
-    #   上午（< 14:00）→ 只推 aihot + juya（builders feed 通常 14:17 才更新）
-    #   下午（>= 14:00）→ 只推 builders（aihot/juya 上午已推过，去重会 skip）
+    #   上午（< 14:00）→ 降级为 morning，只推 aihot + juya
+    #     （builders feed 通常 14:17 才更新，上午推会被日期校验 skip，浪费翻译调用）
+    #   下午（>= 14:00）→ 保持 all，依次推 aihot + juya + builders
+    #     （去重机制会跳过上午已推的，未推的会补推；
+    #      避免上午 cron 全部失败时下午只推 builders 导致 aihot/juya 当天丢失）
     # backfill 模式不受时间限制，手动指定什么就推什么
     if mode == "all" and not backfill:
         now_bj = datetime.now(BEIJING)
         if now_bj.hour < 14:
             mode = "morning"
-        else:
-            mode = "builders"
 
     _log(f"[meta] today={today} backfill={backfill} mode={mode}")
 

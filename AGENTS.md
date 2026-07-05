@@ -24,7 +24,7 @@ pytest -v
 - GitHub Actions workflow 仅保留 `workflow_dispatch` 触发器，已移除 `schedule`，不存在 15:00 自动兜底。
 - `PUSH_MODE=all` 在 `push.py` 内按北京时间 auto-routing：
   - 上午（< 14:00）→ 自动降级为 `morning`，只推 AI HOT 和橘鸦（builders feed 通常 14:17 才更新）。
-  - 下午（>= 14:00）→ 自动降级为 `builders`，只推 follow-builders（aihot/juya 上午已推过，去重会 skip）。
+  - 下午（>= 14:00）→ 保持 `all`，依次推 aihot + juya + builders（去重跳过已推的，未推的会补推）。
   - backfill 模式（设置了 `PUSH_TARGET_DATE`）不受时间限制，手动指定什么就推什么。
 - `PUSH_MODE=morning` / `PUSH_MODE=builders` 仅用于本地单独验证或明确的人工补推。
 - cron-job.org 的 crontab、PAT、Body 属于外部维护项，需要用户自己保管；仓库内不存放 PAT，更新 PAT 在 cron-job.org 后台操作。
