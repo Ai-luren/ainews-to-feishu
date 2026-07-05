@@ -18,14 +18,19 @@ ENV = {
     "LARK_WEBHOOK_SECRET": "s1",
     "LARK_OPS_WEBHOOK_URL": "https://open.feishu.cn/open-apis/bot/v2/hook/ops",
     "LARK_OPS_WEBHOOK_SECRET": "s2",
+    # 默认用 morning 模式测 juya/aihot 流程；
+    # builders 专属测试单独覆盖 PUSH_MODE=builders
+    "PUSH_MODE": "morning",
 }
 
 
 @pytest.fixture(autouse=True)
 def _block_aihot_flow(monkeypatch):
-    """juya 测试不想关心 aihot 流程——把它短路，永远返回"正常结束"。
-    避免 aihot 的 fetch_daily 产生真实网络请求，也避免它污染 sent/state 断言。"""
+    """juya 测试不想关心 aihot/builders 流程——把它们短路，永远返回"正常结束"。
+    避免 aihot/builders 的 fetch 产生真实网络请求，也避免它污染 sent/state 断言。"""
     monkeypatch.setattr(push, "_push_aihot",
+                        lambda *a, **kw: True)
+    monkeypatch.setattr(push, "_push_builders",
                         lambda *a, **kw: True)
 
 
@@ -43,6 +48,34 @@ def test_skip_when_already_pushed_today(state_path, monkeypatch):
     with patch.dict(os.environ, ENV):
         rc = push.main()
     assert rc == 0
+
+
+def test_morning_mode_skips_builders(state_path, monkeypatch):
+    calls = []
+    monkeypatch.setattr(push, "_today", lambda: date(2026, 4, 27))
+    monkeypatch.setattr(push, "_push_aihot", lambda *a, **kw: calls.append("aihot") or True)
+    monkeypatch.setattr(push, "_push_juya", lambda *a, **kw: calls.append("juya") or True)
+    monkeypatch.setattr(push, "_push_builders", lambda *a, **kw: calls.append("builders") or True)
+
+    with patch.dict(os.environ, {**ENV, "PUSH_MODE": "morning"}):
+        rc = push.main()
+
+    assert rc == 0
+    assert calls == ["aihot", "juya"]
+
+
+def test_builders_mode_only_pushes_builders(state_path, monkeypatch):
+    calls = []
+    monkeypatch.setattr(push, "_today", lambda: date(2026, 4, 27))
+    monkeypatch.setattr(push, "_push_aihot", lambda *a, **kw: calls.append("aihot") or True)
+    monkeypatch.setattr(push, "_push_juya", lambda *a, **kw: calls.append("juya") or True)
+    monkeypatch.setattr(push, "_push_builders", lambda *a, **kw: calls.append("builders") or True)
+
+    with patch.dict(os.environ, {**ENV, "PUSH_MODE": "builders"}):
+        rc = push.main()
+
+    assert rc == 0
+    assert calls == ["builders"]
 
 
 def test_skip_when_juya_not_updated(state_path, monkeypatch):

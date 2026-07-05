@@ -1,9 +1,7 @@
 """端到端模拟测试：模拟明天早上 8 点的完整推送流程。"""
 import json
-import os
 from datetime import date, datetime
 from pathlib import Path
-from unittest.mock import patch, MagicMock
 
 import pytest
 
@@ -18,6 +16,10 @@ def mock_env(monkeypatch):
     monkeypatch.setenv("LARK_WEBHOOK_SECRET", "test-secret")
     monkeypatch.setenv("LARK_OPS_WEBHOOK_URL", "https://example.com/ops")
     monkeypatch.setenv("LARK_OPS_WEBHOOK_SECRET", "ops-secret")
+    # 模拟上午推送模式（all 模式在上午会自动分流到 morning）
+    monkeypatch.setenv("PUSH_MODE", "morning")
+    # 短路 builders，避免真实网络请求
+    monkeypatch.setattr(push, "_push_builders", lambda *a, **kw: True)
 
 
 @pytest.fixture
@@ -154,39 +156,45 @@ def test_duplicate_push_skipped(fresh_state: Path, mock_env, monkeypatch):
 
 def test_cron_job_org_schedule_validation():
     """验证 cron-job.org 的 crontab 配置。"""
-    # crontab: */30 8-10 * * *
-    # 应该在以下时间触发（北京时间）：
-    expected_times = ["08:00", "08:30", "09:00", "09:30", "10:00", "10:30"]
+    # crontab: */30 8-15 * * *（北京时间 08:00-15:30）
+    # 每半小时触发一次，14:00 后 all 模式自动分流到 builders
+    expected_times = [
+        "08:00", "08:30", "09:00", "09:30", "10:00", "10:30",
+        "11:00", "11:30", "12:00", "12:30", "13:00", "13:30",
+        "14:00", "14:30", "15:00", "15:30",
+    ]
 
-    # 验证 crontab 表达式解析正确
-    import re
-    crontab = "*/30 8-10 * * *"
+    crontab = "*/30 8-15 * * *"
     parts = crontab.split()
 
     # 分钟: */30 = 0, 30
     assert parts[0] == "*/30"
 
-    # 小时: 8-10 = 8, 9, 10
+    # 小时: 8-15 = 8, 9, 10, 11, 12, 13, 14, 15
     hours = parts[1]
-    assert hours == "8-10"
+    assert hours == "8-15"
 
     # 计算实际触发时间
     actual_times = []
-    for h in range(8, 11):  # 8, 9, 10
+    for h in range(8, 16):  # 8 到 15
         for m in [0, 30]:
             actual_times.append(f"{h:02d}:{m:02d}")
 
     assert actual_times == expected_times, f"触发时间不匹配: {actual_times} != {expected_times}"
 
 
-def test_github_actions_fallback_schedule():
-    """验证 GitHub Actions 兜底 schedule 配置。"""
-    # workflow 中的 cron: '0 3 * * *'
-    # UTC 03:00 = 北京时间 11:00
+def test_no_github_actions_schedule():
+    """验证 GitHub Actions workflow 只有 workflow_dispatch，没有 schedule 触发器。
 
-    from datetime import timedelta
+    2026-06-24 起 GitHub Actions schedule 延迟严重（1-3 小时），
+    已改用 cron-job.org + workflow_dispatch 替代。
+    """
+    from pathlib import Path
 
-    utc_hour = 3
-    beijing_hour = (utc_hour + 8) % 24  # UTC+8
+    workflow_path = Path(__file__).parent.parent / ".github" / "workflows" / "daily-ai-news.yml"
+    content = workflow_path.read_text()
 
-    assert beijing_hour == 11, f"北京时间应该是 11:00，实际是 {beijing_hour}"
+    # 不应包含 schedule 触发器
+    assert "schedule:" not in content, "workflow 不应包含 schedule 触发器（已改用 cron-job.org）"
+    # 应包含 workflow_dispatch
+    assert "workflow_dispatch:" in content, "workflow 应包含 workflow_dispatch 触发器"

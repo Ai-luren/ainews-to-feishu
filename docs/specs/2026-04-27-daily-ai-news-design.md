@@ -1,6 +1,6 @@
 # 每日 AI 新闻推送到飞书群 —— 设计文档
 
-**项目名**：design-team-ai-daily
+**项目名**：ainews-to-feishu
 **作者**：（开源版本，已移除个人信息）
 **日期**：2026-04-27
 **状态**：设计已批准，待实施
@@ -32,7 +32,7 @@
 | 去重机制 | 仓库内 `state.json` 记录 "今日已推" | 简单、可审计 |
 | 保护机制 | RSS 最新 pubDate ≠ 今天则跳过 | 防推陈旧内容 |
 | 视觉形态 | 飞书富文本 interactive 卡片 | 团队体验与架构复杂度的甜点位 |
-| 仓库 | `<你的用户名>/design-team-ai-daily` | — |
+| 仓库 | `<你的用户名>/ainews-to-feishu` | — |
 | 仓库可见性 | Private | state.json 含内部推送历史 |
 | 签名校验 | 开启 | 防 webhook URL 泄露被滥用 |
 | 失败告警 | 独立"运维群/私聊机器人" | 不打扰设计团队群 |
@@ -79,7 +79,7 @@
 ## 5. 仓库结构
 
 ```
-design-team-ai-daily/
+ainews-to-feishu/
 ├── .github/
 │   └── workflows/
 │       └── push.yml          # cron 触发 + 调用 push.py

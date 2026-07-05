@@ -65,7 +65,7 @@ echo ""
 
 DEFAULT_USER=$(gh api user --jq .login)
 prompt GH_OWNER "目标 GitHub 账户或组织（repo 将建在这个账户下）" "$DEFAULT_USER"
-prompt REPO_NAME "新仓库名" "design-team-ai-daily"
+prompt REPO_NAME "新仓库名" "ainews-to-feishu"
 
 echo ""
 info "现在输入飞书自定义机器人的 Webhook URL 和签名 Secret。"

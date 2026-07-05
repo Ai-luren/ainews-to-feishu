@@ -1,20 +1,25 @@
 """推送状态管理。
 
-2026-06-15 后系统同时维护 juya 和 aihot 两个独立推送流程，
-状态字段按"源"拆分，互不影响。
+三个源（juya / aihot / builders）共享通用状态逻辑，
+通过 _Source 类封装字段名差异，旧函数名保留为兼容别名。
 
 state.json 结构（由 load_state 自动 setdefault，无需手动初始化）：
 {
-  "juya_pushed_date": "2026-06-14",        # juya 最后一次推送日期
-  "juya_failures": 0,                       # juya 连续失败次数
-  "last_juya_entry_date": "2026-06-14",     # juya feed 最新一期日期
-  "juya_dead_alerted_on": null,             # juya 停更告警发过的日期
-  "juya_degraded_alerted_on": null,         # juya 降级告警发过的日期
+  "juya_pushed_date": "2026-06-14",
+  "juya_failures": 0,
+  "last_juya_entry_date": "2026-06-14",
+  "juya_dead_alerted_on": null,
+  "juya_degraded_alerted_on": null,
 
-  "aihot_pushed_date": "2026-06-14",        # aihot 最后一次推送日期
-  "aihot_failures": 0,                      # aihot 连续失败次数
-  "last_aihot_entry_date": "2026-06-14",    # aihot 最新一期日期
-  "aihot_dead_alerted_on": null,            # aihot 停更告警发过的日期
+  "aihot_pushed_date": "2026-06-14",
+  "aihot_failures": 0,
+  "last_aihot_entry_date": "2026-06-14",
+  "aihot_dead_alerted_on": null,
+
+  "builders_pushed_date": "2026-06-14",
+  "builders_failures": 0,
+  "last_builders_entry_date": "2026-06-14",
+  "builders_dead_alerted_on": null,
 
   # 兼容旧版（tests/test_state.py 仍在读写；新代码不使用）
   "last_pushed_date": null,
@@ -66,6 +71,11 @@ def load_state(path: Path) -> Dict[str, Any]:
     data.setdefault("aihot_failures", 0)
     data.setdefault("last_aihot_entry_date", None)
     data.setdefault("aihot_dead_alerted_on", None)
+    # builders
+    data.setdefault("builders_pushed_date", None)
+    data.setdefault("builders_failures", 0)
+    data.setdefault("last_builders_entry_date", None)
+    data.setdefault("builders_dead_alerted_on", None)
     # 兼容旧字段
     data.setdefault("last_pushed_date", None)
     data.setdefault("consecutive_failures", 0)
@@ -94,7 +104,7 @@ def save_state(path: Path, data: Dict[str, Any]) -> None:
         raise
 
 
-# ———————————— 通用工具（两个源共用）——————————— #
+# ———————————— 通用工具（所有源共用）——————————— #
 
 
 def _is_pushed(path: Path, key: str, today: date) -> bool:
@@ -102,7 +112,6 @@ def _is_pushed(path: Path, key: str, today: date) -> bool:
     data = load_state(path)
     if data.get(key) == today.isoformat():
         return True
-    # 向后兼容：旧 state.json 可能只有 last_pushed_date
     if key == "juya_pushed_date" and data.get("last_pushed_date") == today.isoformat():
         return True
     return False
@@ -127,7 +136,6 @@ def _mark_pushed(path: Path, pushed_key: str, failures_key: str, today: date) ->
     data = load_state(path)
     data[pushed_key] = today.isoformat()
     data[failures_key] = 0
-    # 写回兼容旧字段（给 test_state.py 用；新代码不会依赖）
     if pushed_key == "juya_pushed_date":
         data["last_pushed_date"] = today.isoformat()
         data["consecutive_failures"] = 0
@@ -138,7 +146,6 @@ def _bump_failure(path: Path, key: str) -> int:
     n = _bump_failure_read(path, key) + 1
     data = load_state(path)
     data[key] = n
-    # 写回兼容旧字段
     if key == "juya_failures":
         data["consecutive_failures"] = n
     save_state(path, data)
@@ -153,9 +160,10 @@ def _reset_failure(path: Path, key: str) -> None:
     save_state(path, data)
 
 
-def _record_entry_date(path: Path, key: str, entry_date: date) -> None:
+def _record_entry_date(path: Path, entry_date_key: str, dead_key: str, entry_date: date) -> None:
     data = load_state(path)
-    data[key] = entry_date.isoformat()
+    data[entry_date_key] = entry_date.isoformat()
+    data[dead_key] = None  # 源头恢复 → 清除"已告警过"标记
     save_state(path, data)
 
 
@@ -181,54 +189,95 @@ def _mark_dead_alerted(path: Path, alerted_key: str, today: date) -> None:
     save_state(path, data)
 
 
-# ———————————— juya 专用（保持旧 API 兼容）——————————— #
+# ———————————— _Source 类：封装字段名差异 —————————— #
 
 
-def is_pushed_today(path: Path, today: date) -> bool:
-    """juya 是否已推送过今天（旧 API 名，测试依赖）。"""
-    return _is_pushed(path, "juya_pushed_date", today)
+class _Source:
+    """封装一个推送源的状态字段名，提供统一方法。"""
+
+    def __init__(self, pushed_key: str, failures_key: str,
+                 entry_date_key: str, dead_alerted_key: str):
+        self.pushed_key = pushed_key
+        self.failures_key = failures_key
+        self.entry_date_key = entry_date_key
+        self.dead_alerted_key = dead_alerted_key
+
+    def is_pushed_today(self, path: Path, today: date) -> bool:
+        return _is_pushed(path, self.pushed_key, today)
+
+    def mark_pushed_today(self, path: Path, today: date) -> None:
+        _mark_pushed(path, self.pushed_key, self.failures_key, today)
+
+    def bump_failure(self, path: Path) -> int:
+        return _bump_failure(path, self.failures_key)
+
+    def reset_failure(self, path: Path) -> None:
+        _reset_failure(path, self.failures_key)
+
+    def record_entry_date(self, path: Path, entry_date: date) -> None:
+        _record_entry_date(path, self.entry_date_key, self.dead_alerted_key, entry_date)
+
+    def get_last_entry_date(self, path: Path) -> Optional[date]:
+        return _get_last_entry_date(path, self.entry_date_key)
+
+    def silent_days(self, path: Path, today: date) -> Optional[int]:
+        last = self.get_last_entry_date(path)
+        if last is None:
+            return None
+        return max((today - last).days, 0)
+
+    def should_alert_dead(self, path: Path, today: date) -> bool:
+        return _should_alert_dead(path, self.dead_alerted_key, today)
+
+    def mark_dead_alerted(self, path: Path, today: date) -> None:
+        _mark_dead_alerted(path, self.dead_alerted_key, today)
 
 
-def mark_pushed_today(path: Path, today: date) -> None:
-    """juya 标记已推送（旧 API 名，测试依赖，兼写旧字段）。"""
-    _mark_pushed(path, "juya_pushed_date", "juya_failures", today)
+# 三个源的实例
+_JUYA = _Source("juya_pushed_date", "juya_failures",
+                "last_juya_entry_date", "juya_dead_alerted_on")
+_AIHOT = _Source("aihot_pushed_date", "aihot_failures",
+                 "last_aihot_entry_date", "aihot_dead_alerted_on")
+_BUILDERS = _Source("builders_pushed_date", "builders_failures",
+                    "last_builders_entry_date", "builders_dead_alerted_on")
 
 
-def bump_failure(path: Path) -> int:
-    """juya 失败 +1（旧 API 名，测试依赖，兼写旧字段）。"""
-    return _bump_failure(path, "juya_failures")
+# ———————————— 兼容别名（保持旧 API 不变）—————————— #
+# juya
+is_pushed_today = _JUYA.is_pushed_today
+mark_pushed_today = _JUYA.mark_pushed_today
+bump_failure = _JUYA.bump_failure
+reset_failure = _JUYA.reset_failure
+record_juya_entry_date = _JUYA.record_entry_date
+get_last_juya_entry_date = _JUYA.get_last_entry_date
+juya_silent_days = _JUYA.silent_days
+should_alert_juya_dead = _JUYA.should_alert_dead
+mark_juya_dead_alerted = _JUYA.mark_dead_alerted
+
+# aihot
+is_aihot_pushed_today = _AIHOT.is_pushed_today
+mark_aihot_pushed_today = _AIHOT.mark_pushed_today
+bump_aihot_failure = _AIHOT.bump_failure
+reset_aihot_failure = _AIHOT.reset_failure
+record_aihot_entry_date = _AIHOT.record_entry_date
+get_last_aihot_entry_date = _AIHOT.get_last_entry_date
+aihot_silent_days = _AIHOT.silent_days
+should_alert_aihot_dead = _AIHOT.should_alert_dead
+mark_aihot_dead_alerted = _AIHOT.mark_dead_alerted
+
+# builders
+is_builders_pushed_today = _BUILDERS.is_pushed_today
+mark_builders_pushed_today = _BUILDERS.mark_pushed_today
+bump_builders_failure = _BUILDERS.bump_failure
+reset_builders_failure = _BUILDERS.reset_failure
+record_builders_entry_date = _BUILDERS.record_entry_date
+get_last_builders_entry_date = _BUILDERS.get_last_entry_date
+builders_silent_days = _BUILDERS.silent_days
+should_alert_builders_dead = _BUILDERS.should_alert_dead
+mark_builders_dead_alerted = _BUILDERS.mark_dead_alerted
 
 
-def reset_failure(path: Path) -> None:
-    """juya 清零失败（旧 API 名，测试依赖，兼写旧字段）。"""
-    _reset_failure(path, "juya_failures")
-
-
-def record_juya_entry_date(path: Path, entry_date: date) -> None:
-    data = load_state(path)
-    data["last_juya_entry_date"] = entry_date.isoformat()
-    # 源头恢复 → 清除"已告警过"标记，下次再停更时能重新告警
-    data["juya_dead_alerted_on"] = None
-    save_state(path, data)
-
-
-def get_last_juya_entry_date(path: Path) -> Optional[date]:
-    return _get_last_entry_date(path, "last_juya_entry_date")
-
-
-def juya_silent_days(path: Path, today: date) -> Optional[int]:
-    last = get_last_juya_entry_date(path)
-    if last is None:
-        return None
-    return max((today - last).days, 0)
-
-
-def should_alert_juya_dead(path: Path, today: date) -> bool:
-    return _should_alert_dead(path, "juya_dead_alerted_on", today)
-
-
-def mark_juya_dead_alerted(path: Path, today: date) -> None:
-    _mark_dead_alerted(path, "juya_dead_alerted_on", today)
+# ———————————— juya 专属：降级告警 —————————— #
 
 
 def should_alert_juya_degraded(path: Path, today: date) -> bool:
@@ -241,48 +290,3 @@ def mark_juya_degraded_alerted(path: Path, today: date) -> None:
     data = load_state(path)
     data["juya_degraded_alerted_on"] = today.isoformat()
     save_state(path, data)
-
-
-# ———————————— aihot 专用（新增）——————————— #
-
-
-def is_aihot_pushed_today(path: Path, today: date) -> bool:
-    return _is_pushed(path, "aihot_pushed_date", today)
-
-
-def mark_aihot_pushed_today(path: Path, today: date) -> None:
-    _mark_pushed(path, "aihot_pushed_date", "aihot_failures", today)
-
-
-def bump_aihot_failure(path: Path) -> int:
-    return _bump_failure(path, "aihot_failures")
-
-
-def reset_aihot_failure(path: Path) -> None:
-    _reset_failure(path, "aihot_failures")
-
-
-def record_aihot_entry_date(path: Path, entry_date: date) -> None:
-    data = load_state(path)
-    data["last_aihot_entry_date"] = entry_date.isoformat()
-    data["aihot_dead_alerted_on"] = None
-    save_state(path, data)
-
-
-def get_last_aihot_entry_date(path: Path) -> Optional[date]:
-    return _get_last_entry_date(path, "last_aihot_entry_date")
-
-
-def aihot_silent_days(path: Path, today: date) -> Optional[int]:
-    last = get_last_aihot_entry_date(path)
-    if last is None:
-        return None
-    return max((today - last).days, 0)
-
-
-def should_alert_aihot_dead(path: Path, today: date) -> bool:
-    return _should_alert_dead(path, "aihot_dead_alerted_on", today)
-
-
-def mark_aihot_dead_alerted(path: Path, today: date) -> None:
-    _mark_dead_alerted(path, "aihot_dead_alerted_on", today)

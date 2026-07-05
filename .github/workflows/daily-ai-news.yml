@@ -5,20 +5,24 @@ name: daily-ai-news-push
 # 已原生使用 node24 runtime，无需额外配置。
 
 on:
-  schedule:
-    # 兜底：仅北京 12:00（UTC 04:00）跑一次
-    # 主调度靠 cron-job.org（每 30 分钟一次，08:00-11:30 北京时间）
-    # cron-job.org 的准时性比 GitHub Actions 好得多
-    - cron: '0 4 * * *'
   workflow_dispatch:
     inputs:
       target_date:
         description: '(可选) 指定推送日期 YYYY-MM-DD，留空=今天'
         required: false
         default: ''
+      push_mode:
+        description: '推送范围：morning=AI HOT+橘鸦，builders=大佬动态，all=全部'
+        required: false
+        default: 'morning'
+        type: choice
+        options:
+          - morning
+          - builders
+          - all
 
 permissions:
-  contents: write
+  contents: write  # commit state.json 需要；测试步骤不受影响（不操作 git）
 
 jobs:
   push:
@@ -65,6 +69,7 @@ jobs:
           LARK_OPS_WEBHOOK_URL: ${{ secrets.LARK_OPS_WEBHOOK_URL }}
           LARK_OPS_WEBHOOK_SECRET: ${{ secrets.LARK_OPS_WEBHOOK_SECRET }}
           PUSH_TARGET_DATE: ${{ github.event.inputs.target_date }}
+          PUSH_MODE: ${{ github.event.inputs.push_mode || 'morning' }}
 
       - name: commit state.json if changed
         if: always()

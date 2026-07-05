@@ -1,3 +1,4 @@
+import calendar
 import os
 import re
 from datetime import date, datetime
@@ -19,12 +20,15 @@ _DEAD_RSS_URLS = {
     "http://imjuya.github.io/juya-ai-daily/rss.xml",
 }
 RSS_URL = os.environ.get("RSS_URL") or _RSS_URL_DEFAULT
+if not RSS_URL.startswith(("http://", "https://")):
+    print(f"[warn] RSS_URL scheme 非法，回退到 {_RSS_URL_DEFAULT}", flush=True)
+    RSS_URL = _RSS_URL_DEFAULT
 if RSS_URL.rstrip("/") in _DEAD_RSS_URLS:
     print(f"[warn] RSS_URL={RSS_URL} 已废弃，回退到 {_RSS_URL_DEFAULT}", flush=True)
     RSS_URL = _RSS_URL_DEFAULT
 
 MAX_RSS_BYTES = 5 * 1024 * 1024      # 5MB — 正常一期 <2MB，超了多半被劫持
-USER_AGENT = "design-team-ai-daily/1.0 (+https://github.com/<你的用户名>/design-team-ai-daily)"
+USER_AGENT = "ainews-to-feishu/1.0 (+https://github.com/ainews-to-feishu)"
 _HTTP_TIMEOUT = (5, 20)               # connect, read
 
 
@@ -65,8 +69,7 @@ def parse_feed(xml) -> List[dict]:
         if not getattr(e, "published_parsed", None):
             continue
         try:
-            import calendar
-            pub = datetime.utcfromtimestamp(calendar.timegm(e.published_parsed)).replace(tzinfo=pytz.utc)
+            pub = datetime.fromtimestamp(calendar.timegm(e.published_parsed), tz=pytz.utc)
         except (OverflowError, ValueError):
             continue
         # 只用 content:encoded（feedparser 的 content 字段）作为 HTML 正文。

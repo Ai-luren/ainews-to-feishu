@@ -9,7 +9,7 @@ def load_latest_entry():
 def test_card_has_header_with_date():
     entry = load_latest_entry()
     card = parse_entry_to_card(entry)
-    assert card["header"]["template"] in ("purple", "blue", "indigo")
+    assert card["header"]["template"] == "orange"
     title_text = card["header"]["title"]["content"]
     assert "橘鸦 AI 早报" in title_text
     assert entry["title"] in title_text

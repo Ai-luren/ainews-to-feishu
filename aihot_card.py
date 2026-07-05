@@ -8,6 +8,8 @@
 """
 from typing import Any, Dict, List, Mapping, Optional
 
+from card_utils import _escape_md, _safe_url, _s, _truncate
+
 
 # aihot section label → 飞书卡片 header 颜色映射。
 # 跟 juya 不同：aihot 的 section label 是中文且固定。
@@ -19,25 +21,6 @@ _AIHOT_HEADER_TEMPLATE: Dict[str, str] = {
     "技巧与观点": "green",
 }
 _DEFAULT_HEADER_TEMPLATE = "purple"
-
-
-def _s(v) -> str:
-    """把任意值安全转成字符串。"""
-    if v is None:
-        return ""
-    if isinstance(v, str):
-        return v
-    try:
-        return str(v)
-    except Exception:
-        return ""
-
-
-def _truncate(text: str, limit: int) -> str:
-    """超长截断并加省略号。"""
-    if not text or len(text) <= limit:
-        return text or ""
-    return text[: limit - 1] + "…"
 
 
 def parse_daily_to_card(daily: Mapping[str, Any]) -> Optional[Dict[str, Any]]:
@@ -92,9 +75,9 @@ def parse_daily_to_card(daily: Mapping[str, Any]) -> Optional[Dict[str, Any]]:
     if lead_title or lead_paragraph:
         lead_md = []
         if lead_title:
-            lead_md.append(f"**{_truncate(lead_title, 150)}**")
+            lead_md.append(f"**{_escape_md(_truncate(lead_title, 150))}**")
         if lead_paragraph:
-            lead_md.append(_truncate(lead_paragraph, 300))
+            lead_md.append(_escape_md(_truncate(lead_paragraph, 300)))
         if lead_md:
             elements.append({"tag": "div", "text": {"tag": "lark_md", "content": "\n".join(lead_md)}})
 
@@ -104,12 +87,12 @@ def parse_daily_to_card(daily: Mapping[str, Any]) -> Optional[Dict[str, Any]]:
             elements.append({"tag": "hr"})
         md_lines = [f"**{group['category']}**"]
         for item in group["items"]:
-            line = f"• [{_truncate(item['title'], 100)}]({item['url']})"
+            line = f"• [{_escape_md(_truncate(item['title'], 100))}]({_safe_url(item['url'])})"
             md_lines.append(line)
             if item.get("summary"):
-                md_lines.append(f"  {_truncate(item['summary'], 120)}")
+                md_lines.append(f"  {_escape_md(_truncate(item['summary'], 120))}")
             if item.get("source"):
-                md_lines.append(f"  — {item['source']}")
+                md_lines.append(f"  — {_escape_md(item['source'])}")
         elements.append({"tag": "div", "text": {"tag": "lark_md", "content": "\n".join(md_lines)}})
 
     # 快讯（如有）
@@ -122,7 +105,7 @@ def parse_daily_to_card(daily: Mapping[str, Any]) -> Optional[Dict[str, Any]]:
             flash_url = _s(f.get("sourceUrl"))
             if not flash_title or not flash_url:
                 continue
-            flash_lines.append(f"• [{_truncate(flash_title, 150)}]({flash_url})")
+            flash_lines.append(f"• [{_escape_md(_truncate(flash_title, 150))}]({_safe_url(flash_url)})")
         if len(flash_lines) > 1:
             elements.append({"tag": "div", "text": {"tag": "lark_md", "content": "\n".join(flash_lines)}})
 

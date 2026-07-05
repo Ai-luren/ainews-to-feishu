@@ -506,7 +506,7 @@ gh secret set LARK_OPS_WEBHOOK_SECRET</code>
       <p>存在 GitHub Variable 里，不设置默认用橘鸦。换源不需要改任何代码。</p>
       <code>gh variable set RSS_URL \
   --body "https://新的RSS地址" \
-  -R <YOUR_USERNAME>/design-team-ai-daily</code>
+  -R <YOUR_USERNAME>/ainews-to-feishu</code>
     </div>
 
     <div class="cfg">
@@ -560,7 +560,7 @@ gh workflow enable daily-ai-news.yml</code>
       <div>
         <h3>克隆仓库到本地</h3>
         <p>把仓库拉到本地，里面有所有脚本和 Skill 文件，也是你的运维中心。</p>
-        <code>git clone https://github.com/<YOUR_USERNAME>/design-team-ai-daily.git ~/design-team-ai-daily</code>
+        <code>git clone https://github.com/<YOUR_USERNAME>/ainews-to-feishu.git ~/ainews-to-feishu</code>
       </div>
     </div>
 
@@ -569,7 +569,7 @@ gh workflow enable daily-ai-news.yml</code>
       <div>
         <h3>激活 Claude Code Skill（可选但推荐）</h3>
         <p>激活后可以直接跟 Claude 说「换飞书群」「排障」，它会自动一步步引导你操作，不用记命令。</p>
-        <code>mkdir -p ~/.claude/skills &amp;&amp; ln -s ~/design-team-ai-daily/skills/daily-ai-news ~/.claude/skills/daily-ai-news</code>
+        <code>mkdir -p ~/.claude/skills &amp;&amp; ln -s ~/ainews-to-feishu/skills/daily-ai-news ~/.claude/skills/daily-ai-news</code>
       </div>
     </div>
 
@@ -578,10 +578,10 @@ gh workflow enable daily-ai-news.yml</code>
       <div>
         <h3>换了新飞书群？更新 4 个 Webhook Secret</h3>
         <p>在新群建机器人后依次运行，终端提示粘贴时直接粘贴 URL 和 Secret（不会回显，安全）。</p>
-        <code>gh secret set LARK_WEBHOOK_URL        -R <YOUR_USERNAME>/design-team-ai-daily
-gh secret set LARK_WEBHOOK_SECRET     -R <YOUR_USERNAME>/design-team-ai-daily
-gh secret set LARK_OPS_WEBHOOK_URL    -R <YOUR_USERNAME>/design-team-ai-daily
-gh secret set LARK_OPS_WEBHOOK_SECRET -R <YOUR_USERNAME>/design-team-ai-daily</code>
+        <code>gh secret set LARK_WEBHOOK_URL        -R <YOUR_USERNAME>/ainews-to-feishu
+gh secret set LARK_WEBHOOK_SECRET     -R <YOUR_USERNAME>/ainews-to-feishu
+gh secret set LARK_OPS_WEBHOOK_URL    -R <YOUR_USERNAME>/ainews-to-feishu
+gh secret set LARK_OPS_WEBHOOK_SECRET -R <YOUR_USERNAME>/ainews-to-feishu</code>
       </div>
     </div>
 
@@ -590,8 +590,8 @@ gh secret set LARK_OPS_WEBHOOK_SECRET -R <YOUR_USERNAME>/design-team-ai-daily</c
       <div>
         <h3>手动触发一次，确认一切正常</h3>
         <p>看飞书群是否收到卡片。日志显示 <code style="font-size:12px;background:#F1F5F9;padding:1px 5px;border-radius:4px">[ok] pushed</code> 或 <code style="font-size:12px;background:#F1F5F9;padding:1px 5px;border-radius:4px">[skip]</code> 都是正常状态。</p>
-        <code>gh workflow run daily-ai-news.yml -R <YOUR_USERNAME>/design-team-ai-daily
-gh run watch -R <YOUR_USERNAME>/design-team-ai-daily</code>
+        <code>gh workflow run daily-ai-news.yml -R <YOUR_USERNAME>/ainews-to-feishu
+gh run watch -R <YOUR_USERNAME>/ainews-to-feishu</code>
       </div>
     </div>
 
@@ -601,7 +601,7 @@ gh run watch -R <YOUR_USERNAME>/design-team-ai-daily</code>
 </div><!-- /page -->
 
 <footer>
-  <p>design-team-ai-daily · 推送逻辑运行在 GitHub Actions，与本地环境无关</p>
+  <p>ainews-to-feishu · 推送逻辑运行在 GitHub Actions，与本地环境无关</p>
   <p style="margin-top:6px">遇到问题？在 Claude Code 里说「早报没到」，会自动引导你一步步排查。</p>
 </footer>
 

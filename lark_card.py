@@ -3,9 +3,10 @@ from typing import Any, Dict, List, Mapping, Optional
 
 from bs4 import BeautifulSoup
 
+from card_utils import _escape_md, _safe_url, _s
 
-# juya 分类 → 飞书卡片 header 颜色（未知分类回退 purple）。
-# 同时这个 dict 的 keys 就是"已知分类"集合，测试里直接迭代。
+
+# juya 分类集合。保留映射用于兼容现有分类测试和未来分区样式。
 CATEGORY_HEADER_TEMPLATE: Dict[str, str] = {
     "要闻": "indigo",
     "大模型与基础模型": "blue",
@@ -19,21 +20,10 @@ CATEGORY_HEADER_TEMPLATE: Dict[str, str] = {
     "人物与公司": "carmine",
 }
 DEFAULT_HEADER_TEMPLATE = "purple"
+JUYA_HEADER_TEMPLATE = "orange"
 
 # 兼容别名 —— 测试里用 CATEGORY_COLORS 来遍历所有已知分类
 CATEGORY_COLORS = tuple(CATEGORY_HEADER_TEMPLATE.keys())
-
-
-def _s(v) -> str:
-    """把任意值安全转成字符串；None / 空串统一落在默认值。"""
-    if v is None:
-        return ""
-    if isinstance(v, str):
-        return v
-    try:
-        return str(v)
-    except Exception:
-        return ""
 
 
 def _extract_overview_groups(html: str) -> List[Dict[str, Any]]:
@@ -123,7 +113,7 @@ def parse_entry_to_card(entry: Mapping[str, Any]) -> Optional[Dict[str, Any]]:
         return None
 
     title = _s(entry.get("title")) or "<untitled>"
-    link = _s(entry.get("link")) or "#"
+    link = _safe_url(entry.get("link"))
     videos = _extract_video_links(_s(entry.get("description")), content_html)
 
     elements: List[Dict[str, Any]] = []
@@ -132,8 +122,8 @@ def parse_entry_to_card(entry: Mapping[str, Any]) -> Optional[Dict[str, Any]]:
             elements.append({"tag": "hr"})
         md_lines = [f"**{g['category']}**"]
         for item in g["items"]:
-            url = _s(item.get("url")) or "#"
-            md_lines.append(f"• [{_s(item.get('title'))}]({url})")
+            url = _safe_url(item.get("url"))
+            md_lines.append(f"• [{_escape_md(item.get('title'))}]({url})")
         elements.append({"tag": "div", "text": {"tag": "lark_md", "content": "\n".join(md_lines)}})
 
     buttons: List[Dict[str, Any]] = [{
@@ -147,7 +137,7 @@ def parse_entry_to_card(entry: Mapping[str, Any]) -> Optional[Dict[str, Any]]:
             "tag": "button",
             "text": {"tag": "plain_text", "content": "🎬 B站"},
             "type": "default",
-            "url": videos["bilibili"],
+            "url": _safe_url(videos["bilibili"]),
         })
     elements.append({"tag": "action", "actions": buttons})
     elements.append({
@@ -158,13 +148,10 @@ def parse_entry_to_card(entry: Mapping[str, Any]) -> Optional[Dict[str, Any]]:
         }],
     })
 
-    header_template = CATEGORY_HEADER_TEMPLATE.get(
-        groups[0].get("category", "") or "", DEFAULT_HEADER_TEMPLATE,
-    )
     return {
         "config": {"wide_screen_mode": True},
         "header": {
-            "template": header_template,
+            "template": JUYA_HEADER_TEMPLATE,
             "title": {"tag": "plain_text", "content": f"🤖 橘鸦 AI 早报 · {title}"},
         },
         "elements": elements,
