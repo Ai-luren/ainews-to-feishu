@@ -62,8 +62,10 @@ def fetch_daily(target_date: Optional[date] = None) -> Optional[Dict[str, Any]]:
             raise RuntimeError(f"aihot 响应过大: {len(content)} bytes (limit {_MAX_BYTES})")
         data = resp.json()
 
-    if not isinstance(data, dict) or "date" not in data or "sections" not in data:
-        raise ValueError(f"响应结构异常: {list(data.keys())}")
+    if not isinstance(data, dict):
+        raise ValueError(f"aihot 响应非 dict: {type(data).__name__}")
+    if "date" not in data or "sections" not in data:
+        raise ValueError(f"aihot 响应结构异常: {list(data.keys())}")
     return data
 
 

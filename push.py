@@ -186,7 +186,7 @@ def _push_juya(webhook: str, secret: str, ops_webhook: str, ops_secret: str,
 
             # 11:00 前：不标记已推送，返回 False 让后续 cron 重试
             if should_alert_juya_degraded(STATE_PATH, today):
-                link = entry.get("link") or "#"
+                link = _safe_url(entry.get("link"))
                 _alert(ops_webhook, ops_secret,
                        f"⚠️ juya 内容解析降级，等待后续 cron 重试\n{link}")
                 mark_juya_degraded_alerted(STATE_PATH, today)
@@ -228,8 +228,8 @@ def _push_aihot(webhook: str, secret: str, ops_webhook: str, ops_secret: str,
         return _handle_failure("aihot", bump_aihot_failure, reset_aihot_failure,
                                ops_webhook, ops_secret, e, "拉取")
 
-    # 无内容时尝试最新一期
-    if not has_content(daily):
+    # 无内容时尝试最新一期（backfill 模式不 fallback，避免拉到其他日期内容）
+    if not has_content(daily) and not backfill:
         try:
             daily = fetch_daily()
         except Exception as e:
@@ -257,6 +257,9 @@ def _push_aihot(webhook: str, secret: str, ops_webhook: str, ops_secret: str,
         _log(f"[aihot] [skip] content has no date field, skipping")
         return True
     if entry_date != today:
+        if backfill:
+            _log(f"[aihot] [skip] content date {entry_date} != today {today} (backfill)")
+            return False
         _log(f"[aihot] [skip] content date {entry_date} != today {today}（还未更新）")
         return True
 
@@ -330,6 +333,9 @@ def _push_builders(webhook: str, secret: str, ops_webhook: str, ops_secret: str,
         _log(f"[builders] [skip] content has no date field, skipping")
         return True
     if entry_date != today:
+        if backfill:
+            _log(f"[builders] [skip] feed date {entry_date} != today {today} (backfill)")
+            return False
         _log(f"[builders] [skip] feed date {entry_date} != today {today}（还未更新）")
         return True
 

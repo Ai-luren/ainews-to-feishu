@@ -52,8 +52,10 @@ def render_card(daily: dict) -> dict:
         if bio_display:
             md_lines.append(f"  {bio_display}")
 
-        # 中文翻译
-        if text_zh and text_zh != tweet.get("text", ""):
+        # 中文翻译（比较 raw 版本决定是否显示，避免 escape 后的误判）
+        raw_zh = tweet.get("text_zh", "")
+        raw_en = tweet.get("text", "")
+        if raw_zh and raw_zh != raw_en:
             md_lines.append(f"  🇨🇳 {text_zh}")
 
         # 英文原文

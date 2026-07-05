@@ -178,7 +178,10 @@ def fetch_daily() -> Optional[dict]:
         h = t["handle"]
         if h and t.get("bio") and h not in unique_bios:
             unique_bios[h] = t["bio"]
-    translated_bios = {h: _translate(b) for h, b in unique_bios.items()}
+    # bio 也走并发翻译，避免串行超时
+    bio_texts = list(unique_bios.values())
+    bio_translations = _batch_translate(bio_texts)
+    translated_bios = dict(zip(unique_bios.keys(), bio_translations))
     for tweet in tweets:
         h = tweet["handle"]
         if h in translated_bios:

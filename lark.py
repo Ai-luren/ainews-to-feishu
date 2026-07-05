@@ -53,8 +53,8 @@ def _post_json(webhook: str, payload: Mapping[str, Any], timeout: int) -> Mappin
 
     遇到频率限制（code=11232）时自动等待 30 秒重试，最多重试 2 次。
     """
-    if not webhook or not webhook.startswith(("http://", "https://")):
-        raise ValueError(f"invalid webhook (scheme not http/https, got: {webhook[:30]!r}...)")
+    if not webhook or not isinstance(webhook, str) or not webhook.startswith(("http://", "https://")):
+        raise ValueError(f"invalid webhook (scheme not http/https, got: {str(webhook)[:30]!r}...)")
 
     for attempt in range(_RATE_LIMIT_RETRIES + 1):
         try:

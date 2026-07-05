@@ -6,7 +6,7 @@
 
 - 每天 08:00-15:30，每 30 分钟由 cron-job.org 触发一次 `workflow_dispatch`（`PUSH_MODE=all`）
 - 上午（< 14:00）auto-routing 到 morning：检查 AI HOT 和橘鸦两个源
-- 下午（>= 14:00）auto-routing 到 builders：拉取 builders AI 大佬动态，Google 翻译成中文，中英双语推送
+- 下午（>= 14:00）保持 all：依次推 aihot + juya + builders（去重跳过已推的，未推的会补推）
 - juya 有新日报 → 解析 RSS 里的 HTML 概览，渲染成飞书卡片推送
 - aihot 有新日报 → 解析 JSON API，渲染成飞书卡片推送
 - 三个源独立去重，当天推过就不再重复
@@ -15,7 +15,7 @@
 
 ## 效果
 
-飞书群每天最多收到 3 条卡片消息：上午 auto-routing 推 aihot + juya，下午 14:00 后 auto-routing 推 builders。
+飞书群每天最多收到 3 条卡片消息：上午 auto-routing 推 aihot + juya，下午保持 all 三源都推（去重跳过已推的）。
 
 ### 橘鸦 AI 早报
 
@@ -95,7 +95,7 @@
 **第 7 步：确认明天能自动推送**
 - 告诉用户：明天上午 8:00 开始，每 30 分钟 cron-job.org 会自动触发 workflow_dispatch（`PUSH_MODE=all`）
 - 上午（< 14:00）auto-routing 到 morning：如果 juya 发布了新日报，会在 30 分钟内推送到飞书群
-- 下午（>= 14:00）auto-routing 到 builders：follow-builders 的源数据通常在 14:00 后更新，触发后会推送大佬动态
+- 下午（>= 14:00）保持 all：依次推 aihot + juya + builders（去重跳过上午已推的，未推的会补推）
 
 ### 常见问题（部署时）
 
@@ -138,7 +138,7 @@ flowchart TB
     end
 
     subgraph 推送["⚙️ 推送层"]
-        R["auto-routing<br/>&lt;14:00 → morning<br/&gt;=14:00 → builders"]
+        R["auto-routing<br/>&lt;14:00 → morning<br/&gt;=14:00 → all（三源都推）"]
         P["push.py<br/>按 PUSH_MODE 分流"]
         A["aihot.py → aihot_card.py<br/>JSON → 卡片"]
         J["rss.py → lark_card.py<br/>XML → 卡片"]
@@ -158,10 +158,10 @@ flowchart TB
 
     C1 -->|"workflow_dispatch<br/>push_mode=all"| R
     R -->|"<14:00 morning"| P
-    R -->|">=14:00 builders"| P
-    P -->|"morning"| A
-    P -->|"morning"| J
-    P -->|"builders"| B
+    R -->|">=14:00 all（三源都推）"| P
+    P -->|"morning/all"| A
+    P -->|"morning/all"| J
+    P -->|"all"| B
     A --> A1
     J --> J1
     B --> B1

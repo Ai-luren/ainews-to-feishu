@@ -85,7 +85,7 @@ def parse_daily_to_card(daily: Mapping[str, Any]) -> Optional[Dict[str, Any]]:
     for group in flat:
         if elements:  # 不是第一个 group 之前加 hr 分隔
             elements.append({"tag": "hr"})
-        md_lines = [f"**{group['category']}**"]
+        md_lines = [f"**{_escape_md(group['category'])}**"]
         for item in group["items"]:
             line = f"• [{_escape_md(_truncate(item['title'], 100))}]({_safe_url(item['url'])})"
             md_lines.append(line)

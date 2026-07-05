@@ -206,7 +206,7 @@ gh run view <id> --log-failed -R <你的用户名>/ainews-to-feishu
 
 **3. 确认 RSS 源是否更新**
 ```bash
-curl -s "$(gh variable list -R <你的用户名>/ainews-to-feishu --json name,value -q '.[] | select(.name=="RSS_URL") | .value' 2>/dev/null || echo 'https://imjuya.github.io/juya-ai-daily/rss.xml')" | grep -o '<pubDate>[^<]*</pubDate>' | head -3
+curl -s "$(gh variable list -R <你的用户名>/ainews-to-feishu --json name,value -q '.[] | select(.name=="RSS_URL") | .value' 2>/dev/null || echo 'https://daily.juya.uk/rss.xml')" | grep -o '<pubDate>[^<]*</pubDate>' | head -3
 ```
 最新 pubDate 不是今天 → 源头还没发，等。
 

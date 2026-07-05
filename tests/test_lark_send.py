@@ -157,3 +157,19 @@ def test_send_lark_text_sends_json_with_sign():
     assert body["msg_type"] == "text"
     assert body["content"] == {"text": "hello"}
     assert "sign" in body and body["sign"]  # 非空字符串
+
+
+# ---------------------------------------------------------------------------
+# 响应 JSON 顶层是 list（非 dict）
+# ---------------------------------------------------------------------------
+
+@responses.activate
+def test_post_json_list_response_raises():
+    """响应 JSON 顶层是 list（非 dict）→ 抛 RuntimeError。
+
+    飞书 webhook 成功响应固定为 {"code": 0, "msg": "ok"}（dict）。
+    如果响应体是 list（代理劫持 / 网关错误），应报错而不是静默通过。
+    """
+    responses.add(responses.POST, WEBHOOK, status=200, json=["not", "a", "dict"])
+    with pytest.raises(RuntimeError, match="不是 dict"):
+        _post_json(WEBHOOK, {"msg_type": "text"}, 5)
