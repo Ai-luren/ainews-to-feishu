@@ -128,7 +128,8 @@ def test_failure_bumps_and_alerts_at_three(state_path, monkeypatch):
 
     with patch.dict(os.environ, ENV):
         rc = push.main()
-    assert rc == 1
+    # juya 失败但 aihot 被 mock 为成功 → 部分成功 → rc=0
+    assert rc == 0
     assert any(s[1] == ENV["LARK_OPS_WEBHOOK_URL"] for s in sent)
     assert json.loads(state_path.read_text())["consecutive_failures"] == 0
 
@@ -159,8 +160,8 @@ def test_degraded_parse_falls_back_to_text(state_path, monkeypatch):
                         lambda url, secret, text: sent.append((url, text)))
     with patch.dict(os.environ, ENV):
         rc = push.main()
-    # 降级 = 失败，允许后续 cron 重试
-    assert rc == 1
+    # 降级 = juya 失败，但 aihot 被 mock 为成功 → 部分成功 → rc=0
+    assert rc == 0
     # 不发降级文本到主群（避免重试时重复发送）
     urls = [s[0] for s in sent]
     assert ENV["LARK_WEBHOOK_URL"] not in urls
@@ -226,7 +227,8 @@ def test_degraded_alert_only_once_per_day(state_path, monkeypatch):
                         lambda url, secret, text: sent.append((url, text)))
     with patch.dict(os.environ, ENV):
         rc = push.main()
-    assert rc == 1
+    # juya 降级但 aihot 被 mock 为成功 → 部分成功 → rc=0
+    assert rc == 0
     # 不重发告警
     assert sent == []
 
@@ -290,8 +292,8 @@ def test_degraded_retry_before_11am(state_path, monkeypatch):
                         lambda url, secret, text: sent.append((url, text)))
     with patch.dict(os.environ, ENV):
         rc = push.main()
-    # 11:00 前 = 失败，允许重试
-    assert rc == 1
+    # 11:00 前 = juya 失败，但 aihot 被 mock 为成功 → 部分成功 → rc=0
+    assert rc == 0
     urls = [s[0] for s in sent]
     # 主群不收文本
     assert ENV["LARK_WEBHOOK_URL"] not in urls
@@ -382,3 +384,16 @@ def test_integration_fixture_to_card_to_send(state_path, monkeypatch):
     assert len(divs) >= 1, "integration: 至少应有一个概览分组 div"
     # state 被标记
     assert json.loads(state_path.read_text())["last_pushed_date"] == "2026-04-27"
+
+
+def test_all_sources_failed_returns_1(state_path, monkeypatch):
+    """所有源都失败 → rc=1（真正需要关注的失败）。"""
+    # 覆盖 autouse fixture，让 aihot/builders 也失败
+    monkeypatch.setattr(push, "_push_aihot", lambda *a, **kw: False)
+    monkeypatch.setattr(push, "_push_builders", lambda *a, **kw: False)
+    monkeypatch.setattr(push, "_push_juya", lambda *a, **kw: False)
+
+    with patch.dict(os.environ, ENV):
+        rc = push.main()
+
+    assert rc == 1

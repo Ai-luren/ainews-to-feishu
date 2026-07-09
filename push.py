@@ -398,10 +398,25 @@ def main() -> int:
             webhook, secret, ops_webhook, ops_secret, today, backfill,
         )
 
-    if aihot_ok and juya_ok and builders_ok:
+    # 退出码策略：
+    #   全部成功 → 0
+    #   部分成功 → 0（避免单个外部源故障导致整个 run 标红）
+    #   全部失败 → 1（真正需要关注）
+    attempted = []
+    if mode in {"morning", "all"}:
+        attempted.append(("aihot", aihot_ok))
+        attempted.append(("juya", juya_ok))
+    if mode in {"builders", "all"}:
+        attempted.append(("builders", builders_ok))
+
+    failed = [name for name, ok in attempted if not ok]
+    if not failed:
         _log("[meta] all completed")
         return 0
-    _log("[meta] some failed", err=True)
+    if any(ok for _, ok in attempted):
+        _log(f"[meta] partial success, failed: {','.join(failed)}", err=True)
+        return 0
+    _log("[meta] all sources failed", err=True)
     return 1
 
 
