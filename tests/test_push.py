@@ -7,6 +7,7 @@ import pytest
 import pytz
 
 import push
+from conftest import fake_datetime
 
 
 # 所有测试里的伪 entry 都用这个发布时间——反正测试里实际日期由 _today monkeypatch 控制
@@ -139,12 +140,7 @@ def test_degraded_parse_falls_back_to_text(state_path, monkeypatch):
     sent = []
     monkeypatch.setattr(push, "_today", lambda: date(2026, 4, 27))
     # 模拟 09:00 北京时间（11:00 前的重试窗口）
-    fake_now = datetime(2026, 4, 27, 9, 0, tzinfo=pytz.timezone("Asia/Shanghai"))
-    monkeypatch.setattr(push, "datetime",
-                        type("FakeDT", (), {
-                            "now": staticmethod(lambda tz=None: fake_now),
-                            "strptime": datetime.strptime,
-                        }))
+    monkeypatch.setattr(push, "datetime", fake_datetime(9, 0))
     monkeypatch.setattr(push, "fetch_rss", lambda: "<rss/>")
     monkeypatch.setattr(
         push, "extract_today_entry",
@@ -207,12 +203,7 @@ def test_degraded_alert_only_once_per_day(state_path, monkeypatch):
     sent = []
     monkeypatch.setattr(push, "_today", lambda: date(2026, 4, 27))
     # 模拟 09:30 北京时间（11:00 前的重试窗口）
-    fake_now = datetime(2026, 4, 27, 9, 30, tzinfo=pytz.timezone("Asia/Shanghai"))
-    monkeypatch.setattr(push, "datetime",
-                        type("FakeDT", (), {
-                            "now": staticmethod(lambda tz=None: fake_now),
-                            "strptime": datetime.strptime,
-                        }))
+    monkeypatch.setattr(push, "datetime", fake_datetime(9, 30))
     monkeypatch.setattr(push, "fetch_rss", lambda: "<rss/>")
     monkeypatch.setattr(
         push, "extract_today_entry",
@@ -238,12 +229,7 @@ def test_degraded_final_fallback_after_11am(state_path, monkeypatch):
     sent = []
     monkeypatch.setattr(push, "_today", lambda: date(2026, 4, 27))
     # 模拟 11:30 北京时间
-    fake_now = datetime(2026, 4, 27, 11, 30, tzinfo=pytz.timezone("Asia/Shanghai"))
-    monkeypatch.setattr(push, "datetime",
-                        type("FakeDT", (), {
-                            "now": staticmethod(lambda tz=None: fake_now),
-                            "strptime": datetime.strptime,
-                        }))
+    monkeypatch.setattr(push, "datetime", fake_datetime(11, 30))
     monkeypatch.setattr(push, "fetch_rss", lambda: "<rss/>")
     monkeypatch.setattr(
         push, "extract_today_entry",
@@ -272,12 +258,7 @@ def test_degraded_retry_before_11am(state_path, monkeypatch):
     sent = []
     monkeypatch.setattr(push, "_today", lambda: date(2026, 4, 27))
     # 模拟 09:30 北京时间
-    fake_now = datetime(2026, 4, 27, 9, 30, tzinfo=pytz.timezone("Asia/Shanghai"))
-    monkeypatch.setattr(push, "datetime",
-                        type("FakeDT", (), {
-                            "now": staticmethod(lambda tz=None: fake_now),
-                            "strptime": datetime.strptime,
-                        }))
+    monkeypatch.setattr(push, "datetime", fake_datetime(9, 30))
     monkeypatch.setattr(push, "fetch_rss", lambda: "<rss/>")
     monkeypatch.setattr(
         push, "extract_today_entry",
@@ -394,6 +375,18 @@ def test_all_sources_failed_returns_1(state_path, monkeypatch):
     monkeypatch.setattr(push, "_push_juya", lambda *a, **kw: False)
 
     with patch.dict(os.environ, ENV):
+        rc = push.main()
+
+    assert rc == 1
+
+
+def test_all_mode_three_sources_failed_returns_1(state_path, monkeypatch):
+    """all 模式下三个源全部失败 → rc=1。"""
+    monkeypatch.setattr(push, "_push_aihot", lambda *a, **kw: False)
+    monkeypatch.setattr(push, "_push_builders", lambda *a, **kw: False)
+    monkeypatch.setattr(push, "_push_juya", lambda *a, **kw: False)
+
+    with patch.dict(os.environ, {**ENV, "PUSH_MODE": "all"}):
         rc = push.main()
 
     assert rc == 1

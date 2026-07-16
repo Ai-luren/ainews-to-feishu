@@ -141,8 +141,14 @@ def _push_juya(webhook: str, secret: str, ops_webhook: str, ops_secret: str,
         _log(f"[juya] [warn] fetch failed: {e}", err=True)
         if backfill:
             return False
-        return _handle_failure("juya", bump_failure, reset_failure,
-                               ops_webhook, ops_secret, e, "拉取")
+        _handle_failure("juya", bump_failure, reset_failure,
+                        ops_webhook, ops_secret, e, "拉取")
+        # fetch 异常时也检查停更告警——持续故障 3 天以上触发持久告警
+        _handle_dead_alert("juya", "https://daily.juya.uk/",
+                           juya_silent_days, get_last_juya_entry_date,
+                           should_alert_juya_dead, mark_juya_dead_alerted,
+                           ops_webhook, ops_secret, today)
+        return False
 
     # 无内容
     if entry is None:
@@ -225,8 +231,14 @@ def _push_aihot(webhook: str, secret: str, ops_webhook: str, ops_secret: str,
         _log(f"[aihot] [warn] fetch failed: {e}", err=True)
         if backfill:
             return False
-        return _handle_failure("aihot", bump_aihot_failure, reset_aihot_failure,
-                               ops_webhook, ops_secret, e, "拉取")
+        _handle_failure("aihot", bump_aihot_failure, reset_aihot_failure,
+                        ops_webhook, ops_secret, e, "拉取")
+        # fetch 异常时也检查停更告警——持续故障 3 天以上触发持久告警
+        _handle_dead_alert("aihot", f"{AIHOT_BASE_URL}/",
+                           aihot_silent_days, get_last_aihot_entry_date,
+                           should_alert_aihot_dead, mark_aihot_dead_alerted,
+                           ops_webhook, ops_secret, today)
+        return False
 
     # 无内容时尝试最新一期（backfill 模式不 fallback，避免拉到其他日期内容）
     if not has_content(daily) and not backfill:
