@@ -1,7 +1,7 @@
 name: daily-ai-news-push
 
 # 2026-06-16 起 GitHub Actions 强制 Node 24。
-# 本 workflow 使用的 actions/checkout@v6 与 actions/setup-python@v6
+# 本 workflow 使用的 actions/checkout@v6 与 actions/setup-python@v7
 # 已原生使用 node24 runtime，无需额外配置。
 
 on:
@@ -41,7 +41,7 @@ jobs:
           fetch-depth: 0
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: '3.11'
           cache: pip
