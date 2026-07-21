@@ -1,39 +1,60 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="350" viewBox="0 0 1200 350" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="420" viewBox="0 0 1200 420" role="img" aria-labelledby="title desc">
   <title id="title">juya 解析失败时的容错流程</title>
   <desc id="desc">juya 发布但内容为空时，系统先告警并等待重试；11:00 后仍失败则发送带原文链接的文本兜底。</desc>
-  <rect width="1200" height="350" rx="26" fill="#faf9f6"/>
-  <path d="M54 86H1146M54 296H1146" stroke="#d8d5ce"/>
-  <text x="54" y="53" fill="#252a30" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif" font-size="27" font-weight="800">解析失败，也不让早报断掉</text>
-  <text x="1146" y="53" text-anchor="end" fill="#747a80" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="16">JUYA / FALLBACK PATH</text>
+  <rect width="1200" height="420" rx="26" fill="#faf9f6"/>
+  <path d="M54 88H1146M54 366H1146" stroke="#d8d5ce"/>
+
+  <text x="54" y="54" fill="#252a30" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif" font-size="28" font-weight="800">解析失败，也不让早报断掉</text>
+  <text x="1146" y="54" text-anchor="end" fill="#747a80" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="16">JUYA / RECOVERY PATH</text>
+
   <g font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif">
-    <g transform="translate(70 120)">
-      <circle cx="24" cy="24" r="24" fill="#ff6b4a"/>
-      <text x="24" y="32" text-anchor="middle" fill="#fffdf8" font-size="20" font-weight="800">01</text>
-      <text x="68" y="21" fill="#252a30" font-size="22" font-weight="800">发现异常</text>
-      <text x="68" y="51" fill="#747a80" font-size="17">content:encoded 为空</text>
-      <text x="68" y="77" fill="#747a80" font-size="17">运维群收到一次告警</text>
+    <g transform="translate(70 122)">
+      <rect width="300" height="178" rx="18" fill="#fff1ec" stroke="#ffc1b1"/>
+      <circle cx="34" cy="36" r="21" fill="#ff6b4a"/>
+      <text x="34" y="43" text-anchor="middle" fill="#fffdf8" font-size="18" font-weight="800">01</text>
+      <text x="72" y="43" fill="#252a30" font-size="23" font-weight="800">发现异常</text>
+      <path d="M24 80H276" stroke="#ffc1b1"/>
+      <text x="24" y="116" fill="#4b535b" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="18">content:encoded 为空</text>
+      <text x="24" y="148" fill="#747a80" font-size="17">运维群收到一次告警</text>
     </g>
-    <g transform="translate(455 120)">
-      <circle cx="24" cy="24" r="24" fill="#ffb547"/>
-      <text x="24" y="32" text-anchor="middle" fill="#252a30" font-size="20" font-weight="800">02</text>
-      <text x="68" y="21" fill="#252a30" font-size="22" font-weight="800">保留重试机会</text>
-      <text x="68" y="51" fill="#747a80" font-size="17">不标记为已推送</text>
-      <text x="68" y="77" fill="#747a80" font-size="17">下一个 30 分钟继续检查</text>
+
+    <g transform="translate(450 122)">
+      <rect width="300" height="178" rx="18" fill="#fff8e7" stroke="#f5d38b"/>
+      <circle cx="34" cy="36" r="21" fill="#ffb547"/>
+      <text x="34" y="43" text-anchor="middle" fill="#252a30" font-size="18" font-weight="800">02</text>
+      <text x="72" y="43" fill="#252a30" font-size="23" font-weight="800">保留重试机会</text>
+      <path d="M24 80H276" stroke="#f5d38b"/>
+      <text x="24" y="116" fill="#4b535b" font-size="18">不标记为已推送</text>
+      <text x="24" y="148" fill="#747a80" font-size="17">下一个 30 分钟继续检查</text>
     </g>
-    <g transform="translate(840 120)">
-      <circle cx="24" cy="24" r="24" fill="#176b66"/>
-      <text x="24" y="32" text-anchor="middle" fill="#fffdf8" font-size="20" font-weight="800">03</text>
-      <text x="68" y="21" fill="#176b66" font-size="22" font-weight="800">最终兜底</text>
-      <text x="68" y="51" fill="#397d77" font-size="17">11:00 后仍解析失败</text>
-      <text x="68" y="77" fill="#397d77" font-size="17">发带链接文本并完成标记</text>
+
+    <g transform="translate(830 122)">
+      <rect width="300" height="178" rx="18" fill="#e7f4f1" stroke="#a8d8d1"/>
+      <circle cx="34" cy="36" r="21" fill="#176b66"/>
+      <text x="34" y="43" text-anchor="middle" fill="#fffdf8" font-size="18" font-weight="800">03</text>
+      <text x="72" y="43" fill="#176b66" font-size="23" font-weight="800">最终兜底</text>
+      <path d="M24 80H276" stroke="#a8d8d1"/>
+      <text x="24" y="116" fill="#397d77" font-size="18">11:00 后仍解析失败</text>
+      <text x="24" y="148" fill="#397d77" font-size="17">发带链接文本并完成标记</text>
     </g>
   </g>
-  <path d="M385 166H420M770 166H805" stroke="#ff6b4a" stroke-width="3"/>
-  <path d="M420 153L438 166L420 179Z" fill="#ff6b4a"/>
-  <path d="M805 153L823 166L805 179Z" fill="#ff6b4a"/>
-  <g transform="translate(70 316)" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="16">
-    <circle cx="8" cy="0" r="7" fill="#ff6b4a"/><text x="26" y="6" fill="#5f666d">失败可见</text>
-    <circle cx="150" cy="0" r="7" fill="#ffb547"/><text x="168" y="6" fill="#5f666d">自动重试</text>
-    <circle cx="304" cy="0" r="7" fill="#176b66"/><text x="322" y="6" fill="#5f666d">消息仍能到达</text>
+
+  <g fill="#ff6b4a">
+    <path d="M384 211H414" stroke="#ff6b4a" stroke-width="3"/>
+    <path d="M414 198L432 211L414 224Z"/>
+    <path d="M764 211H794" stroke="#ff6b4a" stroke-width="3"/>
+    <path d="M794 198L812 211L794 224Z"/>
+  </g>
+
+  <g transform="translate(70 395)" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="16">
+    <text x="0" y="0" fill="#5f666d">09:00</text>
+    <circle cx="70" cy="-5" r="5" fill="#ff6b4a"/>
+    <text x="90" y="0" fill="#5f666d">告警可见</text>
+    <text x="270" y="0" fill="#5f666d">09:30+</text>
+    <circle cx="350" cy="-5" r="5" fill="#ffb547"/>
+    <text x="370" y="0" fill="#5f666d">继续重试</text>
+    <text x="550" y="0" fill="#5f666d">11:00</text>
+    <circle cx="630" cy="-5" r="5" fill="#176b66"/>
+    <text x="650" y="0" fill="#5f666d">文本兜底送达</text>
   </g>
 </svg>
