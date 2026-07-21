@@ -37,7 +37,7 @@ from state import (
 )
 
 BEIJING = pytz.timezone("Asia/Shanghai")
-STATE_PATH = Path(__file__).parent / "state.json"
+STATE_PATH = Path(__file__).parent.parent / "state.json"
 DEAD_THRESHOLD = 3
 FAILURE_THRESHOLD = 3
 

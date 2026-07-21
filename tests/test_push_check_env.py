@@ -50,6 +50,8 @@ def test_check_env_passes_when_all_present(monkeypatch):
 def test_push_subprocess_exits_2_when_env_missing(tmp_path):
     """完全不带 LARK_* 环境变量跑 push.main() → exit code 2，stderr 明确提示缺变量。"""
     clean_env = {k: v for k, v in os.environ.items() if not k.startswith("LARK_")}
+    # src/ 目录结构调整后，子进程需要 PYTHONPATH 才能找到 push 模块
+    clean_env["PYTHONPATH"] = str(REPO_ROOT / "src")
     # 给 state.json 指定独立位置，避免污染仓库
     state_p = tmp_path / "state.json"
     state_p.write_text("{}")

@@ -51,7 +51,7 @@ jobs:
 
       - name: Sanity check (import modules + verify RSS URL)
         run: |
-          python -c "import lark, lark_card, rss, state, push; print('import ok:', rss.get_effective_rss_url())"
+          PYTHONPATH=src python -c "import lark, lark_card, rss, state, push; print('import ok:', rss.get_effective_rss_url())"
 
       - name: Run tests
         run: python -m pytest tests/ -v
@@ -62,7 +62,7 @@ jobs:
           LARK_OPS_WEBHOOK_SECRET: test-ops-secret
 
       - name: Push to Lark
-        run: python push.py
+        run: python src/push.py
         env:
           LARK_WEBHOOK_URL: ${{ secrets.LARK_WEBHOOK_URL }}
           LARK_WEBHOOK_SECRET: ${{ secrets.LARK_WEBHOOK_SECRET }}
