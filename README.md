@@ -17,8 +17,9 @@
 下面是仓库实际生成的飞书卡片，而不是概念图：
 
 <p align="center">
-  <img src="assets/juya-card.png" width="49%" alt="橘鸦 AI 早报飞书卡片示例">
-  <img src="assets/aihot-card.png" width="49%" alt="AI HOT 日报飞书卡片示例">
+  <img src="assets/juya-card.webp" width="32%" alt="橘鸦 AI 早报飞书卡片示例">
+  <img src="assets/aihot-card.webp" width="32%" alt="AI HOT 日报飞书卡片示例">
+  <img src="assets/builders-card.webp" width="32%" alt="AI 大佬动态飞书卡片示例">
 </p>
 
 ### 三个来源，一条消息流
@@ -44,6 +45,14 @@
 </p>
 
 GitHub Actions 只负责执行 `workflow_dispatch`，不包含内部 `schedule`。外部调度由 cron-job.org 负责，避免把调度时间和代码仓库绑死。
+
+## 解析失败也能交付
+
+juya 的 RSS 内容偶尔会先发布、后补全。系统不会因为第一次解析失败就把当天状态标记为成功：先告警、保留重试机会，11:00 后仍失败才降级为带链接的文本消息。
+
+<p align="center">
+  <img src="assets/readme/fallback.svg" width="100%" alt="juya 内容为空时，系统告警、重试并在 11:00 后发送带链接文本兜底的流程图">
+</p>
 
 ## 部署
 
