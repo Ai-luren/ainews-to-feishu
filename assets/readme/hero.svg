@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="390" viewBox="0 0 1200 390" role="img" aria-labelledby="title desc">
+  <title id="title">AI 每日早报推送系统</title>
+  <desc id="desc">从 AI HOT、橘鸦 AI 早报和 follow-builders 聚合资讯，自动生成飞书卡片并推送到群聊。</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#12151a"/>
+      <stop offset="1" stop-color="#1c232c"/>
+    </linearGradient>
+    <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fffdf8"/>
+      <stop offset="1" stop-color="#f4f0e9"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="12" stdDeviation="14" flood-color="#000000" flood-opacity=".24"/>
+    </filter>
+  </defs>
+  <rect width="1200" height="390" rx="28" fill="url(#bg)"/>
+  <path d="M48 315H1152" stroke="#ffffff" stroke-opacity=".12"/>
+  <path d="M48 74H1152" stroke="#ffffff" stroke-opacity=".12"/>
+  <g transform="translate(62 45)">
+    <text x="0" y="0" fill="#ff6b4a" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="18" font-weight="700" letter-spacing="2">DAILY AI NEWS / FEISHU DELIVERY</text>
+    <text x="0" y="82" fill="#f8f6f1" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif" font-size="53" font-weight="800">AI 每日早报</text>
+    <text x="0" y="142" fill="#f8f6f1" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif" font-size="53" font-weight="800">推送系统</text>
+    <text x="2" y="188" fill="#b9c1cb" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif" font-size="22">聚合资讯 · 去重调度 · 卡片化送达</text>
+    <g transform="translate(0 226)">
+      <rect width="134" height="38" rx="19" fill="#ff6b4a"/>
+      <text x="67" y="25" text-anchor="middle" fill="#17191d" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="16" font-weight="700">3 SOURCES</text>
+      <rect x="146" width="134" height="38" rx="19" fill="#2a333e" stroke="#586574"/>
+      <text x="213" y="25" text-anchor="middle" fill="#f8f6f1" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="16" font-weight="700">30 MINUTES</text>
+      <rect x="292" width="144" height="38" rx="19" fill="#2a333e" stroke="#586574"/>
+      <text x="364" y="25" text-anchor="middle" fill="#f8f6f1" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="16" font-weight="700">LARK CARDS</text>
+    </g>
+  </g>
+  <g transform="translate(720 42) rotate(5)" filter="url(#shadow)">
+    <rect width="390" height="250" rx="18" fill="url(#paper)"/>
+    <rect width="390" height="58" rx="18" fill="#d9f5f0"/>
+    <rect y="42" width="390" height="16" fill="#d9f5f0"/>
+    <circle cx="28" cy="29" r="11" fill="#ff6b4a"/>
+    <text x="50" y="36" fill="#176b66" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif" font-size="22" font-weight="800">🔥 AI HOT 日报</text>
+    <text x="26" y="96" fill="#242a31" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif" font-size="21" font-weight="800">产品发布 / 更新</text>
+    <text x="26" y="130" fill="#326cf4" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif" font-size="17">• 新模型与工具动态</text>
+    <text x="26" y="158" fill="#326cf4" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif" font-size="17">• 行业新闻与关键观点</text>
+    <path d="M26 182H356" stroke="#cbd0d5"/>
+    <text x="26" y="214" fill="#6d7680" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="14">SOURCE: AIHOT / DELIVERY: FEISHU</text>
+  </g>
+  <g transform="translate(755 295)">
+    <circle cx="0" cy="0" r="7" fill="#ff6b4a"/>
+    <path d="M14 0H238" stroke="#ff6b4a" stroke-width="2" stroke-dasharray="5 7"/>
+    <circle cx="252" cy="0" r="7" fill="#ff6b4a"/>
+    <text x="0" y="42" fill="#aeb7c2" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="16">RSS / JSON / FEED → CARD</text>
+  </g>
+</svg>
