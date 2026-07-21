@@ -43,10 +43,10 @@
     <path d="M26 182H356" stroke="#cbd0d5"/>
     <text x="26" y="214" fill="#6d7680" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="14">SOURCE: AIHOT / DELIVERY: FEISHU</text>
   </g>
-  <g transform="translate(755 295)">
+  <g transform="translate(750 344)">
     <circle cx="0" cy="0" r="7" fill="#ff6b4a"/>
     <path d="M14 0H238" stroke="#ff6b4a" stroke-width="2" stroke-dasharray="5 7"/>
     <circle cx="252" cy="0" r="7" fill="#ff6b4a"/>
-    <text x="0" y="42" fill="#aeb7c2" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="16">RSS / JSON / FEED → CARD</text>
+    <text x="0" y="28" fill="#aeb7c2" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="16">RSS / JSON / FEED → CARD</text>
   </g>
 </svg>

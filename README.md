@@ -16,11 +16,13 @@
 
 下面是仓库实际生成的飞书卡片，而不是概念图：
 
-<p align="center">
-  <img src="assets/juya-card.webp" width="32%" alt="橘鸦 AI 早报飞书卡片示例">
-  <img src="assets/aihot-card.webp" width="32%" alt="AI HOT 日报飞书卡片示例">
-  <img src="assets/builders-card.webp" width="32%" alt="AI 大佬动态飞书卡片示例">
-</p>
+<table>
+  <tr>
+    <td valign="top" width="33.33%"><img src="assets/juya-card.webp" width="100%" alt="橘鸦 AI 早报飞书卡片示例"></td>
+    <td valign="top" width="33.33%"><img src="assets/aihot-card.webp" width="100%" alt="AI HOT 日报飞书卡片示例"></td>
+    <td valign="top" width="33.33%"><img src="assets/builders-card.webp" width="100%" alt="AI 大佬动态飞书卡片示例"></td>
+  </tr>
+</table>
 
 ### 三个来源，一条消息流
 
