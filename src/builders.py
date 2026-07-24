@@ -101,11 +101,11 @@ def fetch_feed() -> dict:
     确保每次拉取都能获取最新内容。否则 cron 窗口最后一轮（15:30）
     可能拿到 5 分钟前的缓存，导致 feed 日期还是昨天而跳过推送。
     """
-    s = _session()
-    url = f"{FEED_URL}?t={int(time.time())}"
-    resp = s.get(url, timeout=(5, 30))
-    resp.raise_for_status()
-    data = resp.json()
+    with _session() as s:
+        url = f"{FEED_URL}?t={int(time.time())}"
+        resp = s.get(url, timeout=(5, 30))
+        resp.raise_for_status()
+        data = resp.json()
     # 防御：resp.json() 可能返回 list/str 等，后续 data.get() 会抛 AttributeError
     if not isinstance(data, dict):
         raise ValueError(f"feed 返回非 dict: {type(data).__name__}")
@@ -141,7 +141,7 @@ def get_top_tweets(feed_data: dict, limit: int = MAX_TWEETS) -> list:
         handle = builder.get("handle", "")
         bio = builder.get("bio", "")
         for tweet in builder.get("tweets", []):
-            engagement = tweet.get("likes", 0) + tweet.get("retweets", 0)
+            engagement = (tweet.get("likes") or 0) + (tweet.get("retweets") or 0)
             all_tweets.append({
                 "name": name,
                 "handle": handle,

@@ -321,8 +321,15 @@ def _push_builders(webhook: str, secret: str, ops_webhook: str, ops_secret: str,
         _log(f"[builders] [warn] fetch failed: {e}", err=True)
         if backfill:
             return False
-        return _handle_failure("builders", bump_builders_failure, reset_builders_failure,
-                               ops_webhook, ops_secret, e, "拉取")
+        _handle_failure("builders", bump_builders_failure, reset_builders_failure,
+                        ops_webhook, ops_secret, e, "拉取")
+        # fetch 异常时也检查停更告警——持续故障 3 天以上触发持久告警
+        _handle_dead_alert("follow-builders",
+                           "https://github.com/zarazhangrui/follow-builders",
+                           builders_silent_days, get_last_builders_entry_date,
+                           should_alert_builders_dead, mark_builders_dead_alerted,
+                           ops_webhook, ops_secret, today)
+        return False
 
     if not daily or not daily.get("tweets"):
         if backfill:
